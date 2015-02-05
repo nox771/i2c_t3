@@ -291,7 +291,6 @@ _**Wire.requestFrom(address, length);**_ - blocking routine, requests length byt
 **Wire.getError();** - returns "Wire" error code from a failed Tx/Rx command
 
 * return: 0=success, 1=data too long, 2=recv addr NACK, 3=recv data NACK, 4=other error
-(Note: error code 1 (data too long) is only valid after Tx, if it appears after Rx then it was set by a previous Tx)
 
 
 **Wire.status();** - returns current status of I2C (enum return value)
@@ -369,3 +368,10 @@ _**Wire.onReceive(function);**_ - used to set Slave Rx callback, refer to code e
 _**Wire.onRequest(function);**_ - used to set Slave Tx callback, refer to code examples
 
 	
+## **Compatible Libraries**
+
+These are libraries which are known to be compatible with this I2C library. They may have been possibly modified to utilize enhanced functions (higher speed, timeouts, etc), or perhaps for general compatibility. Please contact their respective authors for questions regarding their usage.
+
+* Arduino sketch for MPU-9250 9DoF with AHRS sensor fusion - https://github.com/kriswiner/MPU-9250
+* LSM9DS0 9DOF sensor AHRS sketch - https://github.com/kriswiner/LSM9DS0
+* Adafruit FRAM board - https://bitbucket.org/JezWeston/adafruit_fram_i2c_t3 
