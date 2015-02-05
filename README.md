@@ -3,13 +3,13 @@ Enhanced I2C library for Teensy 3.x devices
 
 This is an enhanced I2C library for [Teensy 3.x devices](http://pjrc.com/teensy/index.html).
 
-Recent discussion and a usage summary can be found in the [PJRC forums here](https://forum.pjrc.com/threads/21680-New-I2C-library-for-Teensy3)
+Recent discussion and a usage summary can be found in the [PJRC forums here](https://forum.pjrc.com/threads/21680-New-I2C-library-for-Teensy3).
 
 ## **Description**
 
 To use the library, unpack the the zip contents into your sketchbook/libraries folder. Zip file links are located at the end of this post.
 
-To use with existing Arduino sketches, simply change the **#include <Wire.h>** to **#include <i2c_t3.h>**
+To use with existing Arduino sketches, simply change the **#include \<Wire.h\>** to **#include \<i2c_t3.h\>**
 
 Example sketches can be found in the Arduino menus at: **File->Examples->i2c_t3**
 
