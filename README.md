@@ -95,3 +95,23 @@ Similarly, for Interrupt mode to work the I2C ISRs must run at a higher priority
 
 **quad_master** - utilizing both I2C interfaces and both sets of pins for each interface, this creates a device which can operate as a Master on four independent buses. The Wire bus will communicate on pins 18(SDA0)/19(SCL0) and 16(SCL0)/17(SDA0). The Wire1 bus will communicate on pins 29(SCL1)/30(SDA1) and 26(SCL1)/31(SDA1).
 
+## **Header Defines**
+
+These defines can be modified at the top of the **i2c_t3.h** file.
+
+* **I2C_BUS_ENABLE n** - this is a Teensy 3.1 only define, which controls how many buses are enabled. When set as "I2C_BUS_ENABLE 1" only Wire will be active and code/ram size will be equivalent to Teensy 3.0. When set as "I2C_BUS_ENABLE 2" then both Wire and Wire1 will be active and code/ram usage will be increased.
+
+* **I2C_TX_BUFFER_LENGTH n**
+* **I2C_RX_BUFFER_LENGTH n** - these two defines control the buffers allocated to transmit/receive functions. When dealing with Slaves which don't need large communication (eg. sensors or such), these buffers can be reduced to a smaller size. Buffers should be large enough to hold: Target Addr + Target Command (varies with protocol) + Data payload. Default is: 259 bytes = 1 byte Addr + 2 byte Command + 256 byte Data.
+
+* **I2C0_INTR_FLAG_PIN p**
+* **I2C1_INTR_FLAG_PIN p** - these defines make the specified pin high whenever the I2C interrupt occurs (I2C0 == Wire, and I2C1 == Wire1). This is useful as a trigger signal when using a logic analyzer. By default they are undefined (commented out).
+
+## **Function Summary**
+
+The functions are divided into two classifications:
+
+* _**Italic**_ functions are compatible with the original Arduino Wire API. This allows existing Arduino sketches to compile without modification.
+* **Bold** functions are the added enhanced functions. They utilize the advanced capabilities of the Teensy 3.0/3.1 hardware. The library provides the greatest benefit when utilizing these functions (versus the standard Wire library). 
+
+
