@@ -1,5 +1,5 @@
 // -------------------------------------------------------------------------------------------
-// Teensy3.0/3.1 I2C Interrupt Test
+// Teensy3.0/3.1/LC I2C Interrupt Test
 // 15May13 Brian (nox771 at gmail.com)
 // -------------------------------------------------------------------------------------------
 //
@@ -42,12 +42,23 @@
 //       DATAx     = data byte read by Master, multiple bytes are read from increasing address
 //       STOP      = I2C STOP sequence
 // -------------------------------------------------------------------------------------------
+// SETRATE - The I2C Master can adjust the Slave configured I2C rate with this command
+//           The command sequence is:
+//
+// START|I2CADDR+W|SETRATE|RATE|STOP
+//
+// where START     = I2C START sequence
+//       I2CADDR+W = I2C Slave address + I2C write flag
+//       SETRATE   = SETRATE command
+//       RATE      = I2C RATE to use (must be from i2c_rate enum list, eg. I2C_RATE_xxxx)
+// -------------------------------------------------------------------------------------------
 
 #include <i2c_t3.h>
 
 // Command definitions
-#define WRITE 0x10
-#define READ  0x20
+#define WRITE    0x10
+#define READ     0x20
+#define SETRATE  0x30
 
 // Function prototypes
 void readSlave(void);
@@ -61,9 +72,10 @@ void setup()
     pinMode(LED_BUILTIN,OUTPUT);        // LED
 
     // Setup for Master mode, pins 18/19, external pullups, 400kHz
-    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_INT, I2C_RATE_400);
+    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, I2C_RATE_400);
 
     Serial.begin(115200);
+    delay(5);                           // Slave powerup wait
 
     // Setup Slave
     Wire.beginTransmission(target);     // slave addr

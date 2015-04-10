@@ -1,6 +1,18 @@
 /*
     ------------------------------------------------------------------------------------------------------
-    i2c_t3 - I2C library for Teensy3, derived from Teensy3 TwoWire library
+    i2c_t3 - I2C library for Teensy 3.0/3.1/LC
+
+    - (v8) Modified 02Apr15 by Brian (nox771 at gmail.com)
+        - added support for Teensy LC:
+            - fully supported (Master/Slave modes, IMM/ISR/DMA operation)
+            - Wire: pins 16/17 or 18/19, rate limited to I2C_RATE_1200
+            - Wire1: pins 22/23, rate limited to I2C_RATE_2400
+        - added timeout on acquiring bus (prevents lockup when bus cannot be acquired)
+        - added setDefaultTimeout() function for setting the default timeout to apply to all commands
+        - added resetBus() function for toggling SCL to release stuck Slave devices
+        - added setRate(rate) function, similar to setClock(freq), but using rate specifiers (does not
+                require specifying busFreq)
+        - added I2C_AUTO_RETRY user define
 
     - (v7) Modified 09Jan15 by Brian (nox771 at gmail.com)
         - added support for F_BUS frequencies: 60MHz, 56MHz, 48MHz, 36MHz, 24MHz, 16MHz, 8MHz, 4MHz, 2MHz
@@ -81,6 +93,7 @@
         - Added pinConfigure() function for changing pins on the fly (only when bus not busy)
         - Added timeouts to endTransmission(), requestFrom(), and finish()
     ------------------------------------------------------------------------------------------------------
+    Some code segments derived from:
     TwoWire.cpp - TWI/I2C library for Wiring & Arduino
     Copyright (c) 2006 Nicholas Zambetti.  All right reserved.
     Modified 2012 by Todd Krein (todd@krein.org) to implement repeated starts
@@ -100,7 +113,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#if !defined(I2C_T3_H) && (defined(__MK20DX128__) || defined(__MK20DX256__))
+#if !defined(I2C_T3_H) && (defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__)) // 3.0/3.1/LC
 #define I2C_T3_H
 
 #include <inttypes.h>
@@ -113,7 +126,7 @@
 // ======================================================================================================
 
 // ------------------------------------------------------------------------------------------------------
-// I2C Bus Enable control - change to enable buses as follows.  Currently this only affects Teensy3.1.
+// I2C Bus Enable control - change to enable buses as follows.  This affects Teensy3.1 and LC devices.
 //                          Teensy3.0 always uses I2C0 only regardless of this setting.
 //
 // I2C_BUS_ENABLE 1   (enable I2C0 only)
@@ -133,8 +146,19 @@
 // Interrupt flag - uncomment and set below to make the specified pin high whenever the
 //                  I2C interrupt occurs.  This is useful as a trigger signal when using a logic analyzer.
 //
-//#define I2C0_INTR_FLAG_PIN 3
-//#define I2C1_INTR_FLAG_PIN 4
+//#define I2C0_INTR_FLAG_PIN 6
+//#define I2C1_INTR_FLAG_PIN 7
+
+// ------------------------------------------------------------------------------------------------------
+// Auto retry - uncomment to make the library automatically call resetBus() if it has a timeout while
+//              trying to send a START (occurs at the beginning of any endTransmission() or requestFrom()
+//              call).  This will toggle SCL to try and get a hung Slave device to release the SDA line.
+//              If successful then it will try again to send a START, if not then it will return a timeout
+//              error (same as if auto retry was not defined).
+//
+// Note: this is incompatible with multi-master buses, only use in single-master configurations
+//
+#define I2C_AUTO_RETRY
 
 // ======================================================================================================
 // == End User Define Section ===========================================================================
@@ -144,7 +168,7 @@
 // ------------------------------------------------------------------------------------------------------
 // Set number of enabled buses
 //
-#if defined(__MK20DX256__) && (I2C_BUS_ENABLE >= 2)
+#if (defined(__MK20DX256__) || defined(__MKL26Z64__)) && (I2C_BUS_ENABLE >= 2) // 3.1/LC
     #define I2C_BUS_NUM 2
 #else
     #define I2C_BUS_NUM 1
@@ -190,10 +214,11 @@
 //
 enum i2c_op_mode  {I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA};
 enum i2c_mode     {I2C_MASTER, I2C_SLAVE};
-enum i2c_pins     {I2C_PINS_18_19,
-                   I2C_PINS_16_17,
-                   I2C_PINS_29_30,
-                   I2C_PINS_26_31};
+enum i2c_pins     {I2C_PINS_18_19,          // 19 SCL  18 SDA
+                   I2C_PINS_16_17,          // 16 SCL  17 SDA
+                   I2C_PINS_22_23,          // 22 SCL  23 SDA  (LC only)
+                   I2C_PINS_29_30,          // 29 SCL  30 SDA  (3.1 only)
+                   I2C_PINS_26_31};         // 26 SCL  31 SDA  (3.1 only)
 enum i2c_pullup   {I2C_PULLUP_EXT, I2C_PULLUP_INT};
 enum i2c_rate     {I2C_RATE_100,
                    I2C_RATE_200,
@@ -218,11 +243,13 @@ enum i2c_status   {I2C_WAITING,
                    I2C_ADDR_NAK,
                    I2C_DATA_NAK,
                    I2C_ARB_LOST,
+                   I2C_BUF_OVF,
                    I2C_SLAVE_TX,
                    I2C_SLAVE_RX};
 enum i2c_dma_state {I2C_DMA_OFF,
                     I2C_DMA_ADDR,
-                    I2C_DMA_BULK};
+                    I2C_DMA_BULK,
+                    I2C_DMA_LAST};
 
 
 // ------------------------------------------------------------------------------------------------------
@@ -251,6 +278,8 @@ struct i2cStruct
     i2c_op_mode opMode;                      // Operating Mode                    (User)
     i2c_mode currentMode;                    // Current Mode                      (User)
     i2c_pins currentPins;                    // Current Pins                      (User)
+    i2c_pullup currentPullup;                // Current Pullup                    (User)
+    i2c_rate currentRate;                    // Current Rate                      (User)
     i2c_stop currentStop;                    // Current Stop                      (User)
     volatile i2c_status currentStatus;       // Current Status                    (User&ISR)
     uint8_t  rxAddr;                         // Rx Address                        (ISR)
@@ -261,6 +290,7 @@ struct i2cStruct
     void (*user_onReceive)(size_t len);      // Slave Rx Callback Function        (User)
     void (*user_onRequest)(void);            // Slave Tx Callback Function        (User)
     DMAChannel* DMA;                         // DMA Channel object                (User&ISR)
+    uint32_t defTimeout;                     // Default Timeout                   (User)
 };
 
 
@@ -274,26 +304,49 @@ extern "C" void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus);
 class i2c_t3 : public Stream
 {
 private:
+    //
     // I2C data structures - these need to be static so "C" ISRs can use them
+    //
     static struct i2cStruct i2cData[I2C_BUS_NUM];
+    //
+    // Primary I2C ISR (I2C0)
+    //
+    friend void i2c0_isr(void);
+    friend void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus);
+    //
+    // Slave STOP detection (I2C0) - 3.0/3.1 only
+    //
+    #if (defined(__MK20DX128__) || defined(__MK20DX256__))
+        static void sda0_rising_isr(void);
+        static void sda_rising_isr_handler(struct i2cStruct* i2c, uint8_t bus);
+    #endif
+
+    #if I2C_BUS_NUM >= 2
+        //
+        // Secondary I2C ISR (I2C1)
+        //
+        friend void i2c1_isr(void);
+        //
+        // Slave STOP detection (I2C1) - 3.1 only
+        //
+        #if defined(__MK20DX256__)
+            static void sda1_rising_isr(void);
+        #endif
+    #endif
+
+public:
+    //
     // I2C bus number - this is a local, passed as an argument to base functions
     //                  since static functions cannot see it.
     uint8_t bus;
+    //
     // I2C structure pointer - this is a local, passed as an argument to base functions
     //                         since static functions cannot see it.
     struct i2cStruct* i2c;
 
-    friend void i2c0_isr(void);
-    friend void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus);
-    static void sda0_rising_isr(void);
-    static void sda_rising_isr_handler(struct i2cStruct* i2c, uint8_t bus);
-
-    #if I2C_BUS_NUM >= 2
-        friend void i2c1_isr(void);
-        static void sda1_rising_isr(void);
-    #endif
-
-public:
+    // ------------------------------------------------------------------------------------------------------
+    // Constructor
+    //
     i2c_t3(uint8_t i2c_bus);
     ~i2c_t3();
 
@@ -303,61 +356,54 @@ public:
     static void begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t address1, uint8_t address2,
                        i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode);
     //
-    // Initialize I2C (Master) - initializes I2C as Master mode, pins 18/19 (Wire) or 29/30 (Wire1), external pullups, 100kHz rate
+    // Initialize I2C (Master) - initializes I2C as Master mode, external pullups, 100kHz rate
+    //                         - pins 18/19 (Wire), pins 29/30 (Wire1 on 3.1), pins 22/23 (Wire1 on LC)
     // return: none
     //
     inline void begin()
-        { begin_(i2c, bus, I2C_MASTER, 0, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_29_30), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); }
+    {
+        #if defined(__MKL26Z64__)
+            begin_(i2c, bus, I2C_MASTER, 0, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_22_23), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); // LC
+        #else
+            begin_(i2c, bus, I2C_MASTER, 0, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_29_30), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); // 3.0/3.1
+        #endif
+    }
     //
-    // Initialize I2C (Slave) - initializes I2C as Slave mode using address, pins 18/19 (Wire) or 29/30 (Wire1), external pullups, 100kHz rate
+    // Initialize I2C (Slave) - initializes I2C as Slave mode using address, external pullups, 100kHz rate
+    //                        - pins 18/19 (Wire), pins 29/30 (Wire1 on 3.1), pins 22/23 (Wire1 on LC)
     // return: none
     // parameters:
     //      address = 7bit slave address of device
     //
     inline void begin(int address)
-        { begin_(i2c, bus, I2C_SLAVE, (uint8_t)address, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_29_30), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); }
+    {
+        #if defined(__MKL26Z64__)
+            begin_(i2c, bus, I2C_SLAVE, (uint8_t)address, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_22_23), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); // LC
+        #else
+            begin_(i2c, bus, I2C_SLAVE, (uint8_t)address, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_29_30), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); // 3.0/3.1
+        #endif
+    }
     inline void begin(uint8_t address)
-        { begin_(i2c, bus, I2C_SLAVE, address, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_29_30), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); }
+    {
+        #if defined(__MKL26Z64__)
+            begin_(i2c, bus, I2C_SLAVE, address, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_22_23), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); // LC
+        #else
+            begin_(i2c, bus, I2C_SLAVE, address, 0, ((bus == 0) ? I2C_PINS_18_19 : I2C_PINS_29_30), I2C_PULLUP_EXT, I2C_RATE_100, I2C_OP_MODE_ISR); // 3.0/3.1
+        #endif
+    }
     //
     // Initialize I2C - initializes I2C as Master or single address Slave
     // return: none
     // parameters:
     //      mode = I2C_MASTER, I2C_SLAVE
     //      address = 7bit slave address when configured as Slave (ignored for Master mode)
-    //      pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
+    //      pins = Wire: I2C_PINS_18_19, I2C_PINS_16_17 | Wire1(3.1): I2C_PINS_29_30, I2C_PINS_26_31 | Wire1(LC): I2C_PINS_22_23
     //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
     //      rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000,
     //             I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000
+    //      opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
     //
-    inline void begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate)
-        { begin_(i2c, bus, mode, address, 0, pins, pullup, rate, I2C_OP_MODE_ISR); }
-    //
-    // Initialize I2C - initializes I2C as Master or address range Slave
-    // return: none
-    // parameters:
-    //      mode = I2C_MASTER, I2C_SLAVE
-    //      address1 = 1st 7bit address for specifying Slave address range (ignored for Master mode)
-    //      address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
-    //      pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
-    //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
-    //      rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000,
-    //             I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000
-    //
-    inline void begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup, i2c_rate rate)
-        { begin_(i2c, bus, mode, address1, address2, pins, pullup, rate, I2C_OP_MODE_ISR); }
-    //
-    // Initialize I2C - initializes I2C as Master or single address Slave
-    // return: none
-    // parameters:
-    //      mode = I2C_MASTER, I2C_SLAVE
-    //      address = 7bit slave address when configured as Slave (ignored for Master mode)
-    //      pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
-    //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
-    //      rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000,
-    //             I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000
-    //      opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode)
-    //
-    inline void begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
+    inline void begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode=I2C_OP_MODE_ISR)
         { begin_(i2c, bus, mode, address, 0, pins, pullup, rate, opMode); }
     //
     // Initialize I2C - initializes I2C as Master or address range Slave
@@ -366,13 +412,13 @@ public:
     //      mode = I2C_MASTER, I2C_SLAVE
     //      address1 = 1st 7bit address for specifying Slave address range (ignored for Master mode)
     //      address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
-    //      pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
+    //      pins = Wire: I2C_PINS_18_19, I2C_PINS_16_17 | Wire1(3.1): I2C_PINS_29_30, I2C_PINS_26_31 | Wire1(LC): I2C_PINS_22_23
     //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
     //      rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000,
     //             I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000
-    //      opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode)
+    //      opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
     //
-    inline void begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
+    inline void begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode=I2C_OP_MODE_ISR)
         { begin_(i2c, bus, mode, address1, address2, pins, pullup, rate, opMode); }
 
     // ------------------------------------------------------------------------------------------------------
@@ -407,7 +453,7 @@ public:
     // For a given F_BUS, if an unsupported rate is given, then the highest freq available is used (since
     // unsupported rates fall off from the high end).
     //
-    //                                              I2C_RATE (MHz)
+    //                                              I2C_RATE (kHz)
     // F_CPU    F_BUS    3000 2800 2400 2000 1800 1500 1200 1000  800  600  400  300  200  100
     // -----    -----    ---------------------------------------------------------------------
     //  168M     56M            y    y    y    y    y    y    y    y    y    y    y    y    y
@@ -423,6 +469,13 @@ public:
     //    2M      2M                                                                        y
     //
     inline uint8_t setRate(uint32_t busFreq, i2c_rate rate) { return setRate_(i2c, busFreq, rate); }
+    inline uint8_t setRate(i2c_rate rate) // i2c_t3 version of setClock
+    {
+        if(i2c->currentPins == I2C_PINS_22_23)
+            return setRate_(i2c, (uint32_t)F_CPU, rate); // LC Wire1 bus uses system clock (F_CPU) instead of bus clock (F_BUS)
+        else
+            return setRate_(i2c, (uint32_t)F_BUS, rate);
+    }
     //
     // Set I2C rate - reconfigures I2C frequency divider based on supplied bus freq and desired I2C freq.
     //                I2C frequency in this case is quantized to an approximate I2C_RATE based on actual
@@ -434,21 +487,56 @@ public:
     //      freq = desired I2C frequency (will be quantized to nearest rate)
     //
     inline uint8_t setRate(uint32_t busFreq, uint32_t i2cFreq) { return setRate_(i2c, busFreq, i2cFreq); }
-    inline void setClock(uint32_t i2cFreq) { setRate_(i2c, (uint32_t)F_BUS, i2cFreq); } // Wire compatibility
+    inline void setClock(uint32_t i2cFreq) // Wire compatibility
+    {
+        if(i2c->currentPins == I2C_PINS_22_23)
+            setRate_(i2c, (uint32_t)F_CPU, i2cFreq); // LC Wire1 bus uses system clock (F_CPU) instead of bus clock (F_BUS)
+        else
+            setRate_(i2c, (uint32_t)F_BUS, i2cFreq);
+    }
 
     // ------------------------------------------------------------------------------------------------------
     // Configure I2C pins (base routine)
     //
-    static uint8_t pinConfigure_(struct i2cStruct* i2c, uint8_t bus, i2c_pins pins, i2c_pullup pullup);
+    static uint8_t pinConfigure_(struct i2cStruct* i2c, uint8_t bus, i2c_pins pins, i2c_pullup pullup, uint8_t reconfig=1);
     //
-    // Configure I2C pins - reconfigures active I2C pins on-the-fly (only works when bus is idle). Inactive pins
-    //                      will switch to input mode using same pullup configuration.
+    // Configure I2C pins - reconfigures active I2C pins on-the-fly (only works when bus is idle).  If reconfig
+    //                      set then inactive pins will switch to input mode using same pullup configuration.
     // return: 1=success, 0=fail (bus busy)
     // parameters:
-    //      pins = Wire: I2C_PINS_18_19, I2C_PINS_16_17 | Wire1: I2C_PINS_29_30, I2C_PINS_26_31
+    //      pins = Wire: I2C_PINS_18_19, I2C_PINS_16_17 | Wire1(3.1): I2C_PINS_29_30, I2C_PINS_26_31 | Wire1(LC): I2C_PINS_22_23
     //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
+    //      reconfig = 1=reconfigure alternate pins, 0=do not reconfigure alternate pins (base routine only)
     //
-    inline uint8_t pinConfigure(i2c_pins pins, i2c_pullup pullup) { return pinConfigure_(i2c, bus, pins, pullup); }
+    inline uint8_t pinConfigure(i2c_pins pins, i2c_pullup pullup) { return pinConfigure_(i2c, bus, pins, pullup, 1); }
+
+    // ------------------------------------------------------------------------------------------------------
+    // Acquire Bus (static) - acquires bus in Master mode and escalates priority as needed, intended
+    //                        for internal use only
+    // return: 1=success, 0=fail (cannot acquire bus)
+    // parameters:
+    //      timeout = timeout in microseconds
+    //      forceImm = flag to indicate if immediate mode is required
+    //
+    static uint8_t acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout, uint8_t& forceImm);
+
+    // ------------------------------------------------------------------------------------------------------
+    // Set Default Timeout - sets the default timeout to be applied to all functions called with a timeout of
+    //                       zero (the default in cases where timeout is not specified).  The default is
+    //                       initially zero (infinite wait).
+    // return: none
+    // parameters:
+    //      timeout = timeout in microseconds
+    inline void setDefaultTimeout(uint32_t timeout) { i2c->defTimeout = timeout; }
+
+    // ------------------------------------------------------------------------------------------------------
+    // Reset Bus - toggles SCL until SDA line is released (9 clocks max).  This is used to correct
+    //             a hung bus in which a Slave device missed some clocks and remains stuck outputting
+    //             a low signal on SDA (thereby preventing START/STOP signaling).
+    // return: none
+    //
+    static void resetBus_(struct i2cStruct* i2c, uint8_t bus);
+    inline void resetBus(void) { resetBus_(i2c, bus); }
 
     // ------------------------------------------------------------------------------------------------------
     // Setup Master Transmit - initialize Tx buffer for transmit to slave at address
@@ -573,7 +661,6 @@ public:
     // ------------------------------------------------------------------------------------------------------
     // Get Wire Error - returns "Wire" error code from a failed Tx/Rx command
     // return: 0=success, 1=data too long, 2=recv addr NACK, 3=recv data NACK, 4=other error
-    // (Note: error code 1 (data too long) is only valid after Tx, if it appears after Rx then it was set by a previous Tx)
     //
     uint8_t getError(void);
 
@@ -597,19 +684,19 @@ public:
     // ------------------------------------------------------------------------------------------------------
     // Return Status (base routine)
     //
-    static uint8_t finish_(struct i2cStruct* i2c, uint32_t timeout);
+    static uint8_t finish_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout);
     //
     // Finish - blocking routine, loops until Tx/Rx is complete
     // return: 1=success (Tx or Rx completed, no error), 0=fail (NAK, timeout or Arb Lost)
     //
-    inline uint8_t finish(void) { return finish_(i2c, 0); }
+    inline uint8_t finish(void) { return finish_(i2c, bus, 0); }
     //
     // Finish - blocking routine with timeout, loops until Tx/Rx is complete or timeout occurs
     // return: 1=success (Tx or Rx completed, no error), 0=fail (NAK, timeout or Arb Lost)
     // parameters:
     //      timeout = timeout in microseconds
     //
-    inline uint8_t finish(uint32_t timeout) { return finish_(i2c, timeout); }
+    inline uint8_t finish(uint32_t timeout) { return finish_(i2c, bus, timeout); }
 
     // ------------------------------------------------------------------------------------------------------
     // Write - write data byte to Tx buffer
