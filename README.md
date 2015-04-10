@@ -1,13 +1,13 @@
 # i2c_t3
-Enhanced I2C library for Teensy 3.x devices
+Enhanced I2C library for Teensy 3.0/3.1/LC devices
 
-This is an enhanced I2C library for [Teensy 3.x devices](http://pjrc.com/teensy/index.html).
+This is an enhanced I2C library for [Teensy 3.0/3.1/LC devices](http://pjrc.com/teensy/index.html).
 
 Recent discussion and a usage summary can be found in the [PJRC forums here](https://forum.pjrc.com/threads/21680-New-I2C-library-for-Teensy3).
 
 ## **Description**
 
-To use the library, unpack the the zip contents into your sketchbook/libraries folder. Zip file links are located at the end of this post.
+To use the library, unpack the library contents into your sketchbook/libraries folder.
 
 To use with existing Arduino sketches, simply change the **#include \<Wire.h\>** to **#include \<i2c_t3.h\>**
 
@@ -16,16 +16,19 @@ Example sketches can be found in the Arduino menus at: **File->Examples->i2c_t3*
 The latest version of the library provides the following:
 
 * For **Teensy 3.0**, the I2C interface is: **Wire**
-* For **Teensy 3.1**, the two I2C interfaces are: **Wire** and **Wire1**
+* For **Teensy 3.1 & LC**, the two I2C interfaces are: **Wire** and **Wire1**
 
-Each interface has two sets of pins that it can utilize. Only one set of pins can be used at a time, but in a Master configuration the pins can be changed when the bus is idle.
+Some interfaces have two sets of pins that they can utilize. Only one set of pins can be used at a time, but in a Master configuration the pins can be changed when the bus is idle.
+The **Wire** bus will communicate on pins:
+* **18(SDA0)/19(SCL0)** and **16(SCL0)/17(SDA0)**
 
-* The **Wire** bus will communicate on pins **18(SDA0)/19(SCL0)** and **16(SCL0)/17(SDA0)**.
-* The **Wire1** bus will communicate on pins **29(SCL1)/30(SDA1)** and **26(SCL1)/31(SDA1)**.
+The **Wire1** bus will communicate on pins:
+* **Teensy 3.1** - **29(SCL1)/30(SDA1)** and **26(SCL1)/31(SDA1)**
+* **Teensy LC** - **22(SCL1)/23(SDA1)**
 
-Unfortunately the Wire1 connections are all on the surface mount backside pads. It is recommended to use a breakout expansion board to access those, as the pads are likely not mechanically "robust", with respect to soldered wires pulling on them.
+On Teensy 3.1 the Wire1 connections are all on the surface mount backside pads. It is recommended to use a breakout expansion board to access those, as the pads are likely not mechanically "robust", with respect to soldered wires pulling on them.
 
-As far as voltage levels, the Teensy 3.0 I2C pins are 3.3V tolerant, and the Teensy 3.1 I2C pins are 5V tolerant. To connect 5V devices to Teensy 3.0 or to connect multiple voltage level I2C buses, refer to the following app note by NXP:
+As far as voltage levels, the Teensy 3.0 & LC pins are 3.3V tolerant, and the Teensy 3.1 pins are 5V tolerant. To connect 5V devices to Teensy 3.0/LC or to connect multiple voltage level I2C buses, refer to the following app note by NXP:
 http://www.nxp.com/documents/application_note/AN10441.pdf
 
 The following sections outline the included examples, modifiable header defines, and function summary. Most all functions are demonstrated in the example files.
@@ -34,7 +37,7 @@ The following sections outline the included examples, modifiable header defines,
 
 The library now supports all Teensyduino **F_BUS** frequencies: **60MHz, 56MHz, 48MHz, 36MHz, 24MHz, 16MHz, 8MHz, 4MHz, 2MHz**.
 
-The supported rates depend on the F_BUS setting which in turn depends on the F_CPU setting. The current F_CPU -> F_BUS mapping (Teensyduino 1.21), is as follows. For a given F_BUS, if an unsupported rate is given, then the highest supported rate available is used (since unsupported rates fall off from the high end).
+The supported rates depend on the F_BUS setting which in turn depends on the F_CPU setting. The current F_CPU -> F_BUS mapping (Teensyduino 1.21), is as follows. For a given F_BUS, if an unsupported rate is given, then the highest supported rate available is used (since unsupported rates fall off from the high end). An exception is the Wire1 bus on Teensy LC which uses the F_CPU setting directly.
 
 ```
                                              I2C_RATE (kHz)
@@ -53,7 +56,11 @@ F_CPU    F_BUS    3000 2800 2400 2000 1800 1500 1200 1000  800  600  400  300  2
    2M      2M                                                                        y
 ```
 
-The rates are not directly equivalent to SCL clock speeds. The peripheral limits the actual SCL speeds to well below the theoretical speeds. To get a better idea of throughput I've measured the transfer time for a 128 byte transfer across different F_CPU / F_BUS / I2C_RATE combinations (specifically the interesting overclock speeds). This is shown below.
+For Teensy 3.0/3.1, under normal bus frequencies (F_BUS=48MHz) the max supported rate is I2C_RATE_2400. The higher rates are only achievable using an overclocked F_CPU setting.
+
+The Teensy LC has a maximum rate of I2C_RATE_1200 on Wire, and I2C_RATE_2400 on Wire1.
+
+The rates are not directly equivalent to SCL clock speeds. The peripheral limits the actual SCL speeds to well below the theoretical speeds. To get a better idea of throughput the transfer time for a 128 byte transfer across different F_CPU / F_BUS / I2C_RATE combinations (specifically the interesting overclock speeds) has been measured. This is shown below.
 
 ![I2C Speed Test](speedtest.jpg)
 
@@ -73,7 +80,7 @@ Similarly, for Interrupt mode to work the I2C ISRs must run at a higher priority
 
 ## **Example List**
 
-### **Teensy 3.0/3.1 Examples**
+### **Teensy 3.0/3.1/LC Examples**
 
 **master** - this creates a Master device which is setup to talk to the Slave device given in the slave sketch.
 
@@ -89,9 +96,11 @@ Similarly, for Interrupt mode to work the I2C ISRs must run at a higher priority
 
 **interrupt** - this creates a Master device which is setup to periodically read from a Slave device using a timer interrupt.
 
-### **Teensy 3.1 ONLY Examples:**
+### **Teensy 3.1/LC ONLY Examples:**
 
 **dual_bus_master_slave** - this creates a device using one bus as a Master and one bus as a Slave. This is particularly useful for Master/Slave development as they can be wired together, creating a closed test environment in a single device.
+
+### **Teensy 3.1 ONLY Examples:**
 
 **quad_master** - utilizing both I2C interfaces and both sets of pins for each interface, this creates a device which can operate as a Master on four independent buses. The Wire bus will communicate on pins 18(SDA0)/19(SCL0) and 16(SCL0)/17(SDA0). The Wire1 bus will communicate on pins 29(SCL1)/30(SDA1) and 26(SCL1)/31(SDA1).
 
@@ -101,11 +110,13 @@ These defines can be modified at the top of the **i2c_t3.h** file.
 
 * **I2C_BUS_ENABLE n** - this is a Teensy 3.1 only define, which controls how many buses are enabled. When set as "I2C_BUS_ENABLE 1" only Wire will be active and code/ram size will be equivalent to Teensy 3.0. When set as "I2C_BUS_ENABLE 2" then both Wire and Wire1 will be active and code/ram usage will be increased.
 
-* **I2C_TX_BUFFER_LENGTH n**
+* **I2C_TX_BUFFER_LENGTH n** 
 * **I2C_RX_BUFFER_LENGTH n** - these two defines control the buffers allocated to transmit/receive functions. When dealing with Slaves which don't need large communication (eg. sensors or such), these buffers can be reduced to a smaller size. Buffers should be large enough to hold: Target Addr + Target Command (varies with protocol) + Data payload. Default is: 259 bytes = 1 byte Addr + 2 byte Command + 256 byte Data.
 
 * **I2C0_INTR_FLAG_PIN p**
 * **I2C1_INTR_FLAG_PIN p** - these defines make the specified pin high whenever the I2C interrupt occurs (I2C0 == Wire, and I2C1 == Wire1). This is useful as a trigger signal when using a logic analyzer. By default they are undefined (commented out).
+
+* **I2C_AUTO_RETRY** - this define is used to make the library automatically call resetBus() if it has a timeout while trying to send a START. This is useful for clearing a hung Slave device from the bus. If successful it will try again to send the START, and proceed normally. If not then it will exit with a timeout. Note - this option is NOT compatible with multi-master buses. By default it is enabled.
 
 ## **Function Summary**
 
@@ -115,12 +126,12 @@ The functions are divided into two classifications:
 * **Bold** functions are the added enhanced functions. They utilize the advanced capabilities of the Teensy 3.0/3.1 hardware. The library provides the greatest benefit when utilizing these functions (versus the standard Wire library). 
 
 
-_**Wire.begin();**_ - initializes I2C as Master mode, pins 18/19 (Wire) or pins 29/30 (Wire1), external pullups, 100kHz rate
+_**Wire.begin();**_ - initializes I2C as Master mode, external pullups, 100kHz rate, pins 18/19 (Wire), pins 29/30 (Wire1 on 3.1), pins 22/23 (Wire1 on LC)
 
 * return: none
 
 
-_**Wire.begin(address);**_ - initializes I2C as Slave mode using address, pins 18/19 (Wire) or pins 29/30 (Wire1), external pullups, 100kHz rate
+_**Wire.begin(address);**_ - initializes I2C as Slave mode using address, external pullups, 100kHz rate, pins 18/19 (Wire), pins 29/30 (Wire1 on 3.1), pins 22/23 (Wire1 on LC)
 
 * return: none
 * parameters:
@@ -133,7 +144,7 @@ _**Wire.begin(address);**_ - initializes I2C as Slave mode using address, pins 1
 * parameters:
     * mode = I2C_MASTER, I2C_SLAVE
     * address = 7bit slave address when configured as Slave (ignored for Master mode)
-    * pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
+    * pins = Wire: I2C_PINS_18_19, I2C_PINS_16_17 | Wire1(3.1): I2C_PINS_29_30, I2C_PINS_26_31 | Wire1(LC): I2C_PINS_22_23
     * pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
     * rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000 
 
@@ -144,7 +155,7 @@ _**Wire.begin(address);**_ - initializes I2C as Slave mode using address, pins 1
 * parameters:
     * mode = I2C_MASTER, I2C_SLAVE
     * address = 7bit slave address when configured as Slave (ignored for Master mode)
-    * pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
+    * pins = Wire: I2C_PINS_18_19, I2C_PINS_16_17 | Wire1(3.1): I2C_PINS_29_30, I2C_PINS_26_31 | Wire1(LC): I2C_PINS_22_23
     * pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
     * rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000
     * opMode = I2C_OP_MODE_ISR, I2C_OP_MODE_DMA, I2C_OP_MODE_IMM 
@@ -157,7 +168,7 @@ _**Wire.begin(address);**_ - initializes I2C as Slave mode using address, pins 1
     * mode = I2C_MASTER, I2C_SLAVE
     * address1 = 1st 7bit address for specifying Slave address range (ignored for Master mode)
     * address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
-    * pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
+    * pins = Wire: I2C_PINS_18_19, I2C_PINS_16_17 | Wire1(3.1): I2C_PINS_29_30, I2C_PINS_26_31 | Wire1(LC): I2C_PINS_22_23
     * pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
     * rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000 
 
@@ -169,7 +180,7 @@ _**Wire.begin(address);**_ - initializes I2C as Slave mode using address, pins 1
     * mode = I2C_MASTER, I2C_SLAVE
     * address1 = 1st 7bit address for specifying Slave address range (ignored for Master mode)
     * address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
-    * pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
+    * pins = Wire: I2C_PINS_18_19, I2C_PINS_16_17 | Wire1(3.1): I2C_PINS_29_30, I2C_PINS_26_31 | Wire1(LC): I2C_PINS_22_23
     * pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
     * rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000
     * opMode = I2C_OP_MODE_ISR, I2C_OP_MODE_DMA, I2C_OP_MODE_IMM 
@@ -189,7 +200,15 @@ _**Wire.begin(address);**_ - initializes I2C as Slave mode using address, pins 1
     * busFreq = bus frequency, typically F_BUS unless reconfigured
     * rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000 
 
+	
+**Wire.setRate(rate);** - reconfigures I2C frequency divider for desired rate (rate in this case is an enum). It will automatically determine the correct bus frequency for the interface (normally F_BUS, but LC Wire1 uses F_CPU). If an unsupported rate is specified, then the highest available rate will be used, and it will flag an error.
 
+* return: 1=success, 0=fail (incompatible bus freq & I2C rate combination)
+* parameters:
+    * busFreq = bus frequency, typically F_BUS unless reconfigured
+    * rate = I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400, I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200, I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400, I2C_RATE_2800, I2C_RATE_3000 	
+
+	
 **Wire.setRate(busFreq, i2cFreq);** - reconfigures I2C frequency divider based on supplied bus freq and desired I2C freq. I2C frequency in this case is quantized to an approximate I2C_RATE based on actual SCL frequency measurements using 48MHz bus as a basis. This is done for simplicity, as theoretical SCL freq do not correlate to actual freq very well.
 
 * return: 1=success, 0=fail (incompatible bus freq & I2C rate combination)
@@ -212,6 +231,18 @@ _**Wire.setClock(i2cFreq);**_ - reconfigures I2C frequency divider to get desire
     * pins = (Wire) I2C_PINS_18_19, I2C_PINS_16_17 or (Wire1) I2C_PINS_29_30, I2C_PINS_26_31
     * pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT 
 
+
+**Wire.setDefaultTimeout(timeout);** - sets the default timeout applied to all function calls which do not explicitly set a timeout. The default is initially zero (infinite wait).
+
+* return: none
+* parameters:
+    * timeout = timeout in microseconds 
+
+
+**Wire.resetBus();** - this is used to try and reset the bus in cases of a hung Slave device (typically a Slave which is stuck outputting a low on SDA due to a lost clock). It will generate up to 9 clocks pulses on SCL in an attempt to get the Slave to release the SDA line. Once SDA is released it will restore I2C functionality.
+
+* return: none
+	
 
 _**Wire.beginTransmission(address);**_ - initialize Tx buffer for transmit to slave at address
 

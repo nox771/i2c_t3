@@ -4,7 +4,8 @@
 // -------------------------------------------------------------------------------------------
 //
 // *******************************************************************************************
-// ** Note: This is a Teensy 3.1 ONLY sketch since it requires a device with two I2C buses. **
+// ** Note: This is a Teensy 3.1 ONLY sketch since it requires a device with two I2C buses, **
+// **       each having two sets of multiplexed pins.                                       **
 // *******************************************************************************************
 //
 // It creates an I2C quad-master device which utilizes both I2C buses, and both sets of pins
@@ -56,12 +57,23 @@
 //       DATAx     = data byte read by Master, multiple bytes are read from increasing address
 //       STOP      = I2C STOP sequence
 // -------------------------------------------------------------------------------------------
+// SETRATE - The I2C Master can adjust the Slave configured I2C rate with this command
+//           The command sequence is:
+//
+// START|I2CADDR+W|SETRATE|RATE|STOP
+//
+// where START     = I2C START sequence
+//       I2CADDR+W = I2C Slave address + I2C write flag
+//       SETRATE   = SETRATE command
+//       RATE      = I2C RATE to use (must be from i2c_rate enum list, eg. I2C_RATE_xxxx)
+// -------------------------------------------------------------------------------------------
 
 #include <i2c_t3.h>
 
 // Command definitions
-#define WRITE 0x10
-#define READ  0x20
+#define WRITE    0x10
+#define READ     0x20
+#define SETRATE  0x30
 
 // Function prototypes
 void printWireStatus(void);
@@ -257,6 +269,8 @@ void printStatus(i2c_status status)
     case I2C_ADDR_NAK: Serial.print("Slave addr not acknowledged\n"); break;
     case I2C_DATA_NAK: Serial.print("Slave data not acknowledged\n"); break;
     case I2C_ARB_LOST: Serial.print("Bus Error: Arbitration Lost\n"); break;
+    case I2C_TIMEOUT:  Serial.print("I2C timeout\n"); break;
+    case I2C_BUF_OVF:  Serial.print("I2C buffer overflow\n"); break;
     default:           Serial.print("I2C busy\n"); break;
     }
 }

@@ -1,5 +1,5 @@
 // -------------------------------------------------------------------------------------------
-// Teensy3.0/3.1 I2C Slave
+// Teensy3.0/3.1/LC I2C Slave
 // 08Mar13 Brian (nox771 at gmail.com)
 // -------------------------------------------------------------------------------------------
 //
@@ -85,6 +85,8 @@ void setup()
     // register events
     Wire.onReceive(receiveEvent);
     Wire.onRequest(requestEvent);
+
+    Serial.begin(115200);
 }
 
 void loop()
@@ -124,8 +126,9 @@ void receiveEvent(size_t len)
             break;
 
         case SETRATE:
-            rate = (i2c_rate)Wire.readByte();                // grab rate
-            Wire.setRate(F_BUS, rate);             // set rate
+            rate = (i2c_rate)Wire.readByte();      // grab rate
+            Wire.setRate(rate);                    // set rate
+            break;
         }
     }
 }
