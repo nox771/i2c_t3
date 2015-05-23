@@ -797,7 +797,7 @@ public:
 
     // ------------------------------------------------------------------------------------------------------
     // Immediate operation
-    static void i2c_wait_(struct i2cStruct* i2c) { while(!(*(i2c->S) & I2C_S_IICIF)); *(i2c->S) = I2C_S_IICIF; }
+    static void i2c_wait_(struct i2cStruct* i2c) { while(!(*(i2c->S) & I2C_S_IICIF)){} *(i2c->S) = I2C_S_IICIF; }
 };
 
 extern i2c_t3 Wire;
