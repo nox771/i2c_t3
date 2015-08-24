@@ -28,10 +28,47 @@ The **Wire1** bus will communicate on pins:
 
 On Teensy 3.1 the Wire1 connections are all on the surface mount backside pads. It is recommended to use a breakout expansion board to access those, as the pads are likely not mechanically "robust", with respect to soldered wires pulling on them.
 
-As far as voltage levels, the Teensy 3.0 & LC pins are 3.3V tolerant, and the Teensy 3.1 pins are 5V tolerant. To connect 5V devices to Teensy 3.0/LC or to connect multiple voltage level I2C buses, refer to the following app note by NXP:
+The following sections outline the included examples, modifiable header defines, and function summary. Most all functions are demonstrated in the example files.
+
+## **Pullups**
+
+The I2C bus is a two-wire interface where the SDA and SCL are active pulldown and passive pullup (resistor pullup). When the bus is not communicating both line voltages should be at the high level pullup voltage.
+
+The pullup resistor needs to be low-enough resistance to pull the line voltage up given the capacitance of the wire and the transfer speed used. For a given line capacitance, higher speed transfers will necessitate a lower resistance pullup in order to make the rising-edge rate faster. Generally the falling-edge rates are not a problem since the active pulldowns (typically NMOS) are usually quite strong. This article illustrates the effect of varying pullup resistance:
+http://dsscircuits.com/articles/86-articles/47-effects-of-varying-i2c-pull-up-resistors
+
+However, if an excessively low resistance is used for the pullups then the pulldown devices may not be able to pull the line voltage low enough to be recognized as an low-level input signal. This can sometimes occur if multiple devices are connected on the bus, each with its own internal pullup. TI has a whitepaper on calculating pullup resistance here:
+http://www.ti.com/lit/an/slva689/slva689.pdf
+
+In general, for a majority of simple I2C bus configurations a pullup resistance value in the range of 2k to 5k Ohms should work fine.
+
+### **Teensy Pullups**
+
+Now regarding the Teensy devices, the library provides an option to use either internal pullups or external pullups (by specifiying **I2C_PULLUP_INT** or **I2C_PULLUP_EXT** on the bus configuration functions). For most cases external pullups, **I2C_PULLUP_EXT**, is the preferred connection simply because it is easier to configure the bus for a particular resistance value, and for a particular pullup voltage (not necessarily the same as the device voltages, more below). Note, when using external pullups all devices should be configured for external.
+
+That said, sometimes internal pullups, **I2C_PULLUP_INT**, are used to simplify wiring or for simple test scenarios. When using internal pullups, generally only one device is configured for internal (typically the Master), and Slave devices are configured for external (since they rely on the Master device to pullup). It is possible to have multiple devices configured for internal on the same bus, as long as the aggregate pullup resistance does not become excessively low (the resistances will be in parallel so the aggregate will be less than the lowest value).
+
+The internal pullup resistances of the Teensy devices are as follows:
+
+* Teensy 3.0/3.1 - ~190 Ohms
+* Teensy LC - ~44k Ohms
+
+Neither of these internal pullups is a particularly good value.
+
+The Teensy 3.0/3.1 value of ~190 Ohms is very strong, however in most cases it can work fine on a short bus with a few devices. It will work at most any speed, including the max library speeds (eg. breadboard with 3.0/3.1 device and a few Slave devices usually works fine with internal pullups). That said, multiple Teensy 3.0/3.1 devices configured for internal pullups on the same bus will not work well, the line impedance will be too low in those cases. If using internal on a 3.0/3.1 device make sure at most one device is internal and the rest are external.
+
+On the other hand, the Teensy LC value of ~44k Ohms is very weak. An LC configured for internal will have trouble running at high speeds in all configurations. It is recommended to use external pullups for LC in all cases.
+
+### **Pullup Voltages**
+
+Some consideration should be given when connecting 3.3V and 5V devices together on a common I2C bus. The bus voltage should be one or the other, and there should not be multiple pullups connecting to different voltages on a single line.
+
+As far as voltage levels, the Teensy 3.0 & LC pins are 3.3V tolerant, and the Teensy 3.1 pins are 5V tolerant.
+
+Sometimes devices supplied at 5V will communicate fine if the I2C bus is at 3.3V, because the logic high/low thresholds are biased towards ground more than supply. However if a 5V device truly requires a 5V I2C signal, whereas other devices on the bus require 3.3V signal, there is a method to accomplish this. To connect 5V devices to Teensy 3.0/LC or to connect multiple voltage level I2C buses, refer to the following app note by NXP:
 http://www.nxp.com/documents/application_note/AN10441.pdf
 
-The following sections outline the included examples, modifiable header defines, and function summary. Most all functions are demonstrated in the example files.
+There are also many bidirectional I2C level-shifter ICs and breakout boards on the market which can simplify building such connections.
 
 ## **Clocking**
 
