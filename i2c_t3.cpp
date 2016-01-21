@@ -282,11 +282,25 @@ uint8_t i2c_t3::setOpMode_(struct i2cStruct* i2c, uint8_t bus, i2c_op_mode opMod
             }
             else
             {
-                // setup static DMA settings
-                i2c->DMA->disableOnCompletion();
-                i2c->DMA->attachInterrupt((bus == 0) ? i2c0_isr : i2c1_isr);
-                i2c->DMA->interruptAtCompletion();
-                i2c->DMA->triggerAtHardwareEvent((bus == 0) ? DMAMUX_SOURCE_I2C0 : DMAMUX_SOURCE_I2C1);
+                // DMA object has valid channel
+                if(bus == 0)
+                {
+                    // setup static DMA settings
+                    i2c->DMA->disableOnCompletion();
+                    i2c->DMA->attachInterrupt(i2c0_isr);
+                    i2c->DMA->interruptAtCompletion();
+                    i2c->DMA->triggerAtHardwareEvent(DMAMUX_SOURCE_I2C0);
+                }
+                #if I2C_BUS_NUM >= 2
+                    if(bus == 1)
+                    {
+                        // setup static DMA settings
+                        i2c->DMA->disableOnCompletion();
+                        i2c->DMA->attachInterrupt(i2c1_isr);
+                        i2c->DMA->interruptAtCompletion();
+                        i2c->DMA->triggerAtHardwareEvent(DMAMUX_SOURCE_I2C1);
+                    }
+                #endif
                 i2c->activeDMA = I2C_DMA_OFF;
                 i2c->opMode = I2C_OP_MODE_DMA;
             }
