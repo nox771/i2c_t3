@@ -113,7 +113,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#if !defined(I2C_T3_H) && (defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__)) // 3.0/3.1/LC
+#if !defined(I2C_T3_H) && (defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)) // 3.0/3.1-3.2/LC/3.4/3.5
 #define I2C_T3_H
 
 #include <inttypes.h>
@@ -168,7 +168,7 @@
 // ------------------------------------------------------------------------------------------------------
 // Set number of enabled buses
 //
-#if (defined(__MK20DX256__) || defined(__MKL26Z64__)) && (I2C_BUS_ENABLE >= 2) // 3.1/LC
+#if (defined(__MK20DX256__) || defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)) && (I2C_BUS_ENABLE >= 2) // 3.1/LC/3.4/3.5
     #define I2C_BUS_NUM 2
 #else
     #define I2C_BUS_NUM 1
@@ -316,7 +316,8 @@ private:
     //
     // Slave STOP detection (I2C0) - 3.0/3.1 only
     //
-    #if (defined(__MK20DX128__) || defined(__MK20DX256__))
+    #if (defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__))
+// TODO: 3.4 & 3.5 have stop interrupt - this pin change workaround is probably not needed
         static void sda0_rising_isr(void);
         static void sda_rising_isr_handler(struct i2cStruct* i2c, uint8_t bus);
     #endif
@@ -329,7 +330,8 @@ private:
         //
         // Slave STOP detection (I2C1) - 3.1 only
         //
-        #if defined(__MK20DX256__)
+        #if defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
+// TODO: 3.4 & 3.5 have stop interrupt - this pin change workaround is probably not needed
             static void sda1_rising_isr(void);
         #endif
     #endif

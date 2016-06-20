@@ -113,7 +113,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__) // 3.0/3.1/LC
+#if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.0/3.1-3.2/LC/3.4/3.5
 
 #include "mk20dx128.h"
 #include "core_pins.h"
@@ -129,7 +129,7 @@ struct i2cStruct i2c_t3::i2cData[] =
      &I2C0_FLT, &I2C0_RA, &I2C0_SMB, &I2C0_A2, &I2C0_SLTH, &I2C0_SLTL,
      {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, I2C_PINS_18_19, I2C_PULLUP_EXT, I2C_RATE_100, I2C_STOP, I2C_WAITING,
      0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, 0}
-#if (I2C_BUS_NUM >= 2) & defined(__MK20DX256__) // 3.1
+#if (I2C_BUS_NUM >= 2) && (defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)) // 3.1-3.2/3.4/3.5
    ,{&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2,
      &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL,
      {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, I2C_PINS_29_30, I2C_PULLUP_EXT, I2C_RATE_100, I2C_STOP, I2C_WAITING,
@@ -534,6 +534,7 @@ uint8_t i2c_t3::setRate_(struct i2cStruct* i2c, uint32_t busFreq, i2c_rate rate)
 
     // for LC slave mode, clear and disable STOP interrupt (it is auto enabled in ISR)
     #if defined(__MKL26Z64__) // LC
+//TODO: 3.4 & 3.5 have stop detect interrupt
         if(i2c->currentMode == I2C_SLAVE)
             *(i2c->FLT) = *(i2c->FLT) & ~I2C_FLT_STOPIE;  // clear and disable STOP intr
     #endif
@@ -567,7 +568,7 @@ uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, i2c_pins pins,
     //
     uint32_t pinConfigAlt2 = (pullup == I2C_PULLUP_EXT) ? (PORT_PCR_MUX(2)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE)
                                                         : (PORT_PCR_MUX(2)|PORT_PCR_PE|PORT_PCR_PS);
-    #if I2C_BUS_NUM >= 2 && defined(__MK20DX256__)
+    #if I2C_BUS_NUM >= 2 && (defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__))
         uint32_t pinConfigAlt6 = (pullup == I2C_PULLUP_EXT) ? (PORT_PCR_MUX(6)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE)
                                                             : (PORT_PCR_MUX(6)|PORT_PCR_PE|PORT_PCR_PS);
     #endif
@@ -602,7 +603,7 @@ uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, i2c_pins pins,
     #if I2C_BUS_NUM >= 2
         if(bus == 1)
         {
-            #if defined(__MK20DX256__) // 3.1
+            #if defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)// 3.1
                 if(pins == I2C_PINS_26_31)
                 {
                     if(reconfig)
@@ -697,7 +698,7 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
         currPriority = nvic_execution_priority();
         #if defined(__MK20DX128__) // 3.0
             irqPriority = NVIC_GET_PRIORITY(IRQ_I2C0);
-        #elif defined(__MK20DX256__) || defined(__MKL26Z64__) // 3.1/LC
+        #elif defined(__MK20DX256__) || defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.1-3.2/LC/3.4/3.5
             irqPriority = NVIC_GET_PRIORITY((bus == 0) ? IRQ_I2C0 : IRQ_I2C1);
         #endif
         if(currPriority <= irqPriority)
@@ -708,7 +709,7 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
             {
                 #if defined(__MK20DX128__) // 3.0
                     NVIC_SET_PRIORITY(IRQ_I2C0, currPriority-16);
-                #elif defined(__MK20DX256__) || defined(__MKL26Z64__) // 3.1/LC
+                #elif defined(__MK20DX256__) || defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.1-3.2/LC/3.4/3.5
                     NVIC_SET_PRIORITY((bus == 0) ? IRQ_I2C0 : IRQ_I2C1, currPriority-16);
                 #endif
             }
@@ -831,6 +832,7 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
 
     // clear the status flags
     #if defined(__MKL26Z64__) // LC
+//TODO: 3.4 & 3.5 have stop detect interrupt
         *(i2c->FLT) |= I2C_FLT_STOPF;     // clear STOP intr
     #endif
     *(i2c->S) = I2C_S_IICIF | I2C_S_ARBL; // clear intr, arbl
@@ -962,6 +964,7 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
 
     // clear the status flags
     #if defined(__MKL26Z64__) // LC
+//TODO: 3.4 & 3.5 have stop detect interrupt
         *(i2c->FLT) |= I2C_FLT_STOPF;     // clear STOP intr
     #endif
     *(i2c->S) = I2C_S_IICIF | I2C_S_ARBL; // clear intr, arbl
@@ -1269,6 +1272,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
     status = *(i2c->S);
     c1 = *(i2c->C1);
     #if defined(__MKL26Z64__)
+//TODO: 3.4 & 3.5 have stop detect interrupt
         uint8_t flt = *(i2c->FLT); // LC only
     #endif
 
@@ -1580,6 +1584,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
                     #endif
                 #elif defined(__MKL26Z64__)
+//TODO: 3.4 & 3.5 have stop detect interrupt
                     *(i2c->FLT) |= I2C_FLT_STOPIE; // enable STOP intr for LC
                 #endif
                 i2c->currentStatus = I2C_SLAVE_RX;
@@ -1612,6 +1617,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
             }
         }
         #if defined(__MKL26Z64__) // LC
+//TODO: 3.4 & 3.5 have stop detect interrupt
         else if(flt & I2C_FLT_STOPF) // STOP detected (LC only)
         {
             // There is some weird undocumented stuff going on with the I2C_FLT register on LC.
@@ -1632,7 +1638,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
             // Continue Slave Receive
             //
             // setup SDA-rising ISR - required for STOP detection in Slave Rx mode for 3.0/3.1
-            #if defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1
+            #if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.0/3.1
                 i2c->irqCount = 0;
                 if(i2c->currentPins == I2C_PINS_18_19)
                     attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
@@ -1645,6 +1651,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
                 #endif
             #elif defined(__MKL26Z64__)
+//TODO: 3.4 & 3.5 have stop detect interrupt
                 *(i2c->FLT) |= I2C_FLT_STOPIE; // enable STOP intr
             #endif
             data = *(i2c->D);
@@ -1655,7 +1662,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
     }
 }
 
-#if defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1
+#if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.0/3.1
 // ------------------------------------------------------------------------------------------------------
 // SDA-Rising Interrupt Service Routine - 3.0/3.1 only
 //
