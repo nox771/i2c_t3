@@ -1,13 +1,25 @@
 // -------------------------------------------------------------------------------------------
-// Teensy3.0/3.1/LC I2C Master
-// 08Mar13 Brian (nox771 at gmail.com)
+// I2C Advanced Master
 // -------------------------------------------------------------------------------------------
 //
-// This creates an I2C master device which talks to the simple I2C slave device given in the
-// i2c_t3/slave sketch.
+// This creates an I2C master device with simple read/write commands and a small
+// addressable memory.  Note that this communication adds a protocol layer on top of
+// normal I2C read/write procedures.  As such, it is meant to pair with the advanced_slave 
+// sketch.  The read/write commands are described below.
 //
-// This code assumes the slave config has 256byte memory and I2C addr is 0x44.
-// The various tests are started by pulling one of the control pins low.
+// This code assumes the slave config has 256 byte memory and I2C addr is 0x44.
+//
+// Tests are as follows:
+// Pull pin12 input low to send/receive 256 bytes to/from slave in 32 byte blocks.
+// Pull pin11 input low to send/receive 256 bytes to/from slave in single block.
+// Pull pin10 input low to send/receive 256 bytes to/from slave in single block, using 
+//            non-blocking commands.
+// Pull pin9 input low to send/receive 256 bytes to/from slave in single block, using 
+//            non-blocking commands in DMA mode.
+// Pull pin8 input low to run I2C rate sweep test.  This sweeps the I2C rates on both master 
+//            and slave and times the duration of a 256 byte transfer at each rate.
+//
+// For basic I2C communication only, refer to basic_master and basic_slave example sketches.
 //
 // This example code is in the public domain.
 //
@@ -45,12 +57,12 @@
 // SETRATE - The I2C Master can adjust the Slave configured I2C rate with this command
 //           The command sequence is:
 //
-// START|I2CADDR+W|SETRATE|RATE|STOP
+// START|I2CADDR+W|SETRATE|RATE0|RATE1|RATE2|RATE3|STOP
 //
 // where START     = I2C START sequence
 //       I2CADDR+W = I2C Slave address + I2C write flag
 //       SETRATE   = SETRATE command
-//       RATE      = I2C RATE to use (must be from i2c_rate enum list, eg. I2C_RATE_xxxx)
+//       RATE0-3   = I2C frequency (uint32_t) LSB-to-MSB format
 // -------------------------------------------------------------------------------------------
 
 #include <i2c_t3.h>
@@ -63,8 +75,7 @@
 // Function prototypes
 void print_i2c_setup(void);
 void print_i2c_status(void);
-void print_rate(i2c_rate rate);
-void test_rate(uint8_t target, i2c_rate rate);
+void test_rate(uint8_t target, uint32_t rate);
 
 // Memory
 #define MEM_LEN 256
@@ -81,15 +92,16 @@ void setup()
     pinMode(8,INPUT_PULLUP);        // Control for Test5
 
     Serial.begin(115200);
-
+    
     // Setup for Master mode, pins 18/19, external pullups, 400kHz
-    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, I2C_RATE_400);
+    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
+
+    Wire.setDefaultTimeout(250000); // 250ms default timeout
 }
 
 void loop()
 {
     size_t addr, len;
-    uint8_t databuf[256];
     uint8_t target = 0x44; // slave addr
     uint32_t count;
 
@@ -199,6 +211,8 @@ void loop()
         Serial.print("\n");
         print_i2c_status();                     // print I2C final status
 
+        Serial.printf("Rate (Hz): %d\n", Wire.i2c->currentRate);
+        
         digitalWrite(LED_BUILTIN,LOW);          // LED off
         delay(500);                             // delay to space out tests
     }
@@ -333,6 +347,8 @@ void loop()
 
     if(digitalRead(8) == LOW)
     {
+        uint8_t fail=0;
+        
         digitalWrite(LED_BUILTIN,HIGH);         // LED on
         Serial.print("---------------------------------------------------------\n");
         Serial.print("Test5 : Rate adjustment tests.  This sweeps the I2C rates\n");
@@ -343,48 +359,59 @@ void loop()
         for(uint8_t opMode = I2C_OP_MODE_IMM; opMode <= I2C_OP_MODE_DMA; opMode++)
         {
             Wire.setOpMode((i2c_op_mode)opMode); // set op mode
+            
+            test_rate(target, 10000, fail);
+            test_rate(target, 100000, fail);
+            test_rate(target, 200000, fail);
+            test_rate(target, 300000, fail);
+            test_rate(target, 400000, fail);
+            test_rate(target, 600000, fail);
+            test_rate(target, 800000, fail);
+            test_rate(target, 1000000, fail);
+            test_rate(target, 1200000, fail);
+            test_rate(target, 1500000, fail);
+            test_rate(target, 1800000, fail);
+            test_rate(target, 2000000, fail);
+            test_rate(target, 2400000, fail);
+            test_rate(target, 2800000, fail);
+            test_rate(target, 3000000, fail);
+            test_rate(target, 4000000, fail);
+            test_rate(target, 5000000, fail);
+            test_rate(target, 6000000, fail);
 
-            test_rate(target, I2C_RATE_100);
-            test_rate(target, I2C_RATE_200);
-            test_rate(target, I2C_RATE_300);
-            test_rate(target, I2C_RATE_400);
-            test_rate(target, I2C_RATE_600);
-            test_rate(target, I2C_RATE_800);
-            test_rate(target, I2C_RATE_1000);
-            test_rate(target, I2C_RATE_1200);
-            #if defined(__MK20DX256__) || defined(__MK20DX128__)
-            test_rate(target, I2C_RATE_1500);
-            test_rate(target, I2C_RATE_1800);
-            test_rate(target, I2C_RATE_2000);
-            test_rate(target, I2C_RATE_2400);
-            test_rate(target, I2C_RATE_2800);
-            test_rate(target, I2C_RATE_3000);
-            #endif
             // Restore normal settings
 
             // Change Slave rate
             Wire.beginTransmission(target);         // slave addr
             Wire.write(SETRATE);                    // SETRATE command
-            Wire.write((uint8_t)I2C_RATE_400);      // rate
+            Wire.write((uint8_t)400000&0xFF);       // rate LSB
+            Wire.write((uint8_t)(400000>>8)&0xFF);
+            Wire.write((uint8_t)(400000>>16)&0xFF);
+            Wire.write((uint8_t)(400000>>24)&0xFF); // rate MSB
             Wire.endTransmission();                 // blocking write
 
             // Change Master rate
-            Wire.setRate(F_BUS, I2C_RATE_400);
+            Wire.setClock(400000);
+
+            fail = 0;  // reset flag
         }
         Wire.setOpMode(I2C_OP_MODE_ISR);        // restore default ISR mode
 
         print_i2c_status();                     // print I2C final status
 
-        // Restore normal settings
+        // Restore normal settings (400kHz)
 
         // Change Slave rate
         Wire.beginTransmission(target);         // slave addr
         Wire.write(SETRATE);                    // SETRATE command
-        Wire.write((uint8_t)I2C_RATE_400);      // rate
+        Wire.write((uint8_t)400000&0xFF);       // rate LSB
+        Wire.write((uint8_t)(400000>>8)&0xFF);
+        Wire.write((uint8_t)(400000>>16)&0xFF);
+        Wire.write((uint8_t)(400000>>24)&0xFF); // rate MSB
         Wire.endTransmission();                 // blocking write
 
         // Change Master rate
-        Wire.setRate(F_BUS, I2C_RATE_400);
+        Wire.setClock(400000);
 
         digitalWrite(LED_BUILTIN,LOW);          // LED off
         delay(500);                             // delay to space out tests
@@ -409,9 +436,23 @@ void print_i2c_setup()
     {
     case I2C_PINS_18_19: Serial.print("18/19 "); break;
     case I2C_PINS_16_17: Serial.print("16/17 "); break;
+    #if defined(__MKL26Z64__)  // LC
     case I2C_PINS_22_23: Serial.print("22/23 "); break;
+    #endif
+    #if defined(__MK20DX256__)  // 3.1/3.2
     case I2C_PINS_29_30: Serial.print("29/30 "); break;
     case I2C_PINS_26_31: Serial.print("26/31 "); break;
+    #endif
+    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
+    case I2C_PINS_3_4: Serial.print("3/4 "); break;
+    case I2C_PINS_7_8: Serial.print("7/8 "); break;
+    case I2C_PINS_33_34: Serial.print("33/34 "); break;
+    case I2C_PINS_37_38: Serial.print("37/38 "); break;
+    case I2C_PINS_47_48: Serial.print("47/48 "); break;
+    #endif
+    #if defined(__MK66FX1M0__)  // 3.6
+    case I2C_PINS_56_57: Serial.print("56/57 "); break;
+    #endif
     }
 }
 
@@ -437,91 +478,83 @@ void print_i2c_status(void)
 //
 // print I2C rate
 //
-void print_rate(i2c_rate rate)
+void print_rate(uint32_t rate)
 {
-    switch(rate)
-    {
-    case I2C_RATE_100: Serial.print("I2C_RATE_100"); break;
-    case I2C_RATE_200: Serial.print("I2C_RATE_200"); break;
-    case I2C_RATE_300: Serial.print("I2C_RATE_300"); break;
-    case I2C_RATE_400: Serial.print("I2C_RATE_400"); break;
-    case I2C_RATE_600: Serial.print("I2C_RATE_600"); break;
-    case I2C_RATE_800: Serial.print("I2C_RATE_800"); break;
-    case I2C_RATE_1000: Serial.print("I2C_RATE_1000"); break;
-    case I2C_RATE_1200: Serial.print("I2C_RATE_1200"); break;
-    case I2C_RATE_1500: Serial.print("I2C_RATE_1500"); break;
-    case I2C_RATE_1800: Serial.print("I2C_RATE_1800"); break;
-    case I2C_RATE_2000: Serial.print("I2C_RATE_2000"); break;
-    case I2C_RATE_2400: Serial.print("I2C_RATE_2400"); break;
-    case I2C_RATE_2800: Serial.print("I2C_RATE_2800"); break;
-    case I2C_RATE_3000: Serial.print("I2C_RATE_3000"); break;
-    }
+    Serial.printf("%d Hz    ", rate);
 }
 
 
 //
 // test rate
 //
-void test_rate(uint8_t target, i2c_rate rate)
+void test_rate(uint8_t target, uint32_t rate, uint8_t& fail)
 {
-    uint8_t fail;
+    uint32_t deltatime=0;
     size_t len;
-
-    for(len = 0; len < 256; len++)  // prepare data to send
-        databuf[len] = len;         // set data (equal to addr)
-
-    // Change Slave rate
-    Wire.beginTransmission(target); // slave addr
-    Wire.write(SETRATE);            // SETRATE command
-    Wire.write((uint8_t)rate);      // rate
-    Wire.endTransmission();         // blocking write
-
-    // Change Master rate
-    Wire.setRate(rate);
-
-    // Setup write buffer
-    Wire.beginTransmission(target); // slave addr
-    Wire.write(WRITE);              // WRITE command
-    Wire.write(0);                  // memory address
-    for(len = 0; len < 256; len++)  // write block
-        Wire.write(databuf[len]);
-
-    // Write to Slave
-    elapsedMicros deltaT;
-    Wire.endTransmission();         // blocking write
-    uint32_t deltatime = deltaT;
-    fail = Wire.getError();
-
+    
     if(!fail)
     {
-        Wire.beginTransmission(target);     // slave addr
-        Wire.write(READ);                   // READ command
-        Wire.write(0);                      // memory address
-        Wire.endTransmission(I2C_NOSTOP);   // blocking write (NOSTOP triggers RepSTART on next I2C command)
-        Wire.requestFrom(target,256,I2C_STOP);// blocking read
+        for(len = 0; len < 256; len++)  // prepare data to send
+            databuf[len] = len;         // set data (equal to addr)
+    
+        // Change Slave rate
+        Wire.beginTransmission(target);       // slave addr
+        Wire.write(SETRATE);                  // SETRATE command
+        Wire.write((uint8_t)rate&0xFF);       // rate LSB
+        Wire.write((uint8_t)(rate>>8)&0xFF);
+        Wire.write((uint8_t)(rate>>16)&0xFF);
+        Wire.write((uint8_t)(rate>>24)&0xFF); // rate MSB
+        Wire.endTransmission();               // blocking write
         fail = Wire.getError();
-
+    
         if(!fail)
         {
-            for(len = 0; len < 256; len++)  // verify block
-                if(databuf[len] != Wire.readByte()) { fail=1; break; }
+            // Change Master rate
+            Wire.setClock(rate);
+        
+            // Setup write buffer
+            Wire.beginTransmission(target); // slave addr
+            Wire.write(WRITE);              // WRITE command
+            Wire.write(0);                  // memory address
+            for(len = 0; len < 256; len++)  // write block
+                Wire.write(databuf[len]);
+        
+            // Write to Slave
+            elapsedMicros deltaT;
+            Wire.endTransmission();         // blocking write
+            deltatime = deltaT;
+            fail = Wire.getError();
+        
+            if(!fail)
+            {
+                Wire.beginTransmission(target);     // slave addr
+                Wire.write(READ);                   // READ command
+                Wire.write(0);                      // memory address
+                Wire.endTransmission(I2C_NOSTOP);   // blocking write (NOSTOP triggers RepSTART on next I2C command)
+                Wire.requestFrom(target,256,I2C_STOP);// blocking read
+                fail = Wire.getError();
+        
+                if(!fail)
+                {
+                    for(len = 0; len < 256; len++)  // verify block
+                        if(databuf[len] != Wire.readByte()) { fail=1; break; }
+                }
+            }
         }
-    }
-    print_i2c_setup();
-    if(!fail)
-    {
-        // Print result
-        Serial.print("256 byte transfer at ");
-        print_rate(rate);
-        Serial.print(" (Actual Rate:");
-        print_rate(Wire.i2c->currentRate);
-        Serial.print(")");
-        Serial.printf(" : %d us : ",deltatime);
-        print_i2c_status();
-    }
-    else
-    {
-        Serial.printf("Transfer fail : %d us : ",deltatime);
-        print_i2c_status();
+
+        print_i2c_setup();
+        if(!fail)
+        {
+            // Print result
+            Serial.print("256 byte transfer at ");
+            print_rate(rate);
+            Serial.printf(" (Actual Rate (Hz): %d) : %d us : ", Wire.getClock(), deltatime);
+            print_i2c_status();
+        }
+        else
+        {
+            Serial.printf("Transfer fail : %d us : ",deltatime);
+            print_i2c_status();
+        }
     }
 }

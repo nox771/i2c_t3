@@ -1,10 +1,13 @@
 // -------------------------------------------------------------------------------------------
-// Teensy3.0/3.1/LC I2C Slave
-// 08Mar13 Brian (nox771 at gmail.com)
+// I2C Advanced Slave
 // -------------------------------------------------------------------------------------------
 //
 // This creates an I2C slave device with simple read/write commands and a small
-// addressable memory.
+// addressable memory.  Note that this communication adds a protocol layer on top of
+// normal I2C read/write procedures.  As such, it is meant to pair with the advanced_master 
+// sketch.  The read/write commands are described below.
+//
+// For basic I2C communication only, refer to basic_master and basic_slave example sketches.
 //
 // This example code is in the public domain.
 //
@@ -40,12 +43,12 @@
 // SETRATE - The I2C Master can adjust the Slave configured I2C rate with this command
 //           The command sequence is:
 //
-// START|I2CADDR+W|SETRATE|RATE|STOP
+// START|I2CADDR+W|SETRATE|RATE0|RATE1|RATE2|RATE3|STOP
 //
 // where START     = I2C START sequence
 //       I2CADDR+W = I2C Slave address + I2C write flag
 //       SETRATE   = SETRATE command
-//       RATE      = I2C RATE to use (must be from i2c_rate enum list, eg. I2C_RATE_xxxx)
+//       RATE0-3   = I2C frequency (uint32_t) LSB-to-MSB format
 // -------------------------------------------------------------------------------------------
 
 #include <i2c_t3.h>
@@ -56,15 +59,15 @@
 #define SETRATE  0x30
 
 // Function prototypes
-void receiveEvent(size_t len);
+void receiveEvent(size_t count);
 void requestEvent(void);
 
 // Memory
 #define MEM_LEN 256
 uint8_t mem[MEM_LEN];
-uint8_t cmd;
-size_t addr;
-i2c_rate rate;
+volatile uint8_t cmd;
+volatile size_t addr;
+volatile uint32_t rate;
 
 //
 // Setup
@@ -74,13 +77,13 @@ void setup()
     pinMode(LED_BUILTIN,OUTPUT); // LED
 
     // Setup for Slave mode, address 0x44, pins 18/19, external pullups, 400kHz
-    Wire.begin(I2C_SLAVE, 0x44, I2C_PINS_18_19, I2C_PULLUP_EXT, I2C_RATE_400);
+    Wire.begin(I2C_SLAVE, 0x44, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
 
     // init vars
     cmd = 0;
     addr = 0;
     memset(mem, 0, sizeof(mem));
-    rate = I2C_RATE_400;
+    rate = 400000;
 
     // register events
     Wire.onReceive(receiveEvent);
@@ -104,9 +107,9 @@ void loop()
 //
 // handle Rx Event (incoming I2C request/data)
 //
-void receiveEvent(size_t len)
+void receiveEvent(size_t count)
 {
-    if(Wire.available())
+    if(count)
     {
         // grab command
         cmd = Wire.readByte();
@@ -126,8 +129,14 @@ void receiveEvent(size_t len)
             break;
 
         case SETRATE:
-            rate = (i2c_rate)Wire.readByte();      // grab rate
-            Wire.setRate(rate);                    // set rate
+            if(Wire.available() >= 4)
+            {
+                rate = Wire.readByte();            // grab rate
+                rate |= Wire.readByte() << 8;
+                rate |= Wire.readByte() << 16;
+                rate |= Wire.readByte() << 24;
+                Wire.setClock(rate); // set rate
+            }
             break;
         }
     }
@@ -145,3 +154,4 @@ void requestEvent(void)
         break;
     }
 }
+
