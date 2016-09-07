@@ -74,7 +74,7 @@ The internal pullup resistances of the Teensy devices are as follows:
 
 * Teensy LC - ~44k Ohms
 * Teensy 3.0/3.1/3.2 - ~190 Ohms (this is believed to be a HW bug)
-* Teensy 3.5 - TBD
+* Teensy 3.5 - ~150 Ohms (this is believed to be a HW bug)
 * Teensy 3.6 - ~25 Ohms (this is believed to be a HW bug)
 
 None of these internal pullups is a particularly good value.  
