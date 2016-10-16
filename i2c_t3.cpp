@@ -2,6 +2,11 @@
     ------------------------------------------------------------------------------------------------------
     i2c_t3 - I2C library for Teensy 3.0/3.1/LC
 
+    - (v9.1) Modified 16Oct16 by Brian (nox771 at gmail.com)
+		- applied two fixes due to bug reports:
+			- removed I2C_F_DIV120 setting (120 divide-ratio) for I2C clock
+			- disabled I2C_AUTO_RETRY by default (setting remains but must be manually enabled)
+
     - (v9) Modified 01Jul16 by Brian (nox771 at gmail.com)
         - Added support for Teensy 3.5/3.6:
             - fully supported (Master/Slave modes, IMM/ISR/DMA operation)

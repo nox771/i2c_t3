@@ -183,7 +183,7 @@ These defines can be modified at the top of the **i2c_t3.h** file.
 
 * **I2Cx_INTR_FLAG_PIN p** - these defines make the specified pin high whenever the I2C interrupt occurs (I2C0 == Wire, I2C1 == Wire1, and so on). This is useful as a trigger signal when using a logic analyzer. By default they are undefined (commented out).
 
-* **I2C_AUTO_RETRY** - this define is used to make the library automatically call resetBus() if it has a timeout while trying to send a START. This is useful for clearing a hung Slave device from the bus. If successful it will try again to send the START, and proceed normally. If not then it will exit with a timeout. Note - this option is NOT compatible with multi-master buses. By default it is enabled.
+* **I2C_AUTO_RETRY** - this define is used to make the library automatically call resetBus() if it has a timeout while trying to send a START. This is useful for clearing a hung Slave device from the bus. If successful it will try again to send the START, and proceed normally. If not then it will exit with a timeout. Note - this option is NOT compatible with multi-master buses. By default it is disabled.
 
 ## **Function Summary**
 
