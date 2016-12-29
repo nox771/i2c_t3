@@ -1,11 +1,14 @@
 /*
     ------------------------------------------------------------------------------------------------------
-    i2c_t3 - I2C library for Teensy 3.0/3.1/LC
+    i2c_t3 - I2C library for Teensy 3.x & LC
+
+    - (v9.2) Modified 29Dec16 by Brian (nox771 at gmail.com)
+        - improved resetBus() function to reset C1 state (thanks hw999)
 
     - (v9.1) Modified 16Oct16 by Brian (nox771 at gmail.com)
-		- applied two fixes due to bug reports:
-			- removed I2C_F_DIV120 setting (120 divide-ratio) for I2C clock
-			- disabled I2C_AUTO_RETRY by default (setting remains but must be manually enabled)
+        - applied two fixes due to bug reports:
+            - removed I2C_F_DIV120 setting (120 divide-ratio) for I2C clock
+            - disabled I2C_AUTO_RETRY by default (setting remains but must be manually enabled)
 
     - (v9) Modified 01Jul16 by Brian (nox771 at gmail.com)
         - Added support for Teensy 3.5/3.6:
@@ -372,14 +375,14 @@ const uint8_t i2c_div_ratio[] =
      I2C_F_DIV52,I2C_F_DIV56,I2C_F_DIV60,I2C_F_DIV64,
      I2C_F_DIV68,I2C_F_DIV72,I2C_F_DIV80,I2C_F_DIV88,
      I2C_F_DIV96,I2C_F_DIV104,I2C_F_DIV112,I2C_F_DIV128,
-	 I2C_F_DIV136,I2C_F_DIV144,I2C_F_DIV160,I2C_F_DIV176,
-	 I2C_F_DIV192,I2C_F_DIV224,I2C_F_DIV240,I2C_F_DIV256,
-	 I2C_F_DIV288,I2C_F_DIV320,I2C_F_DIV352,I2C_F_DIV384,
-	 I2C_F_DIV448,I2C_F_DIV480,I2C_F_DIV512,I2C_F_DIV576,
-	 I2C_F_DIV640,I2C_F_DIV768,I2C_F_DIV896,I2C_F_DIV960,
-	 I2C_F_DIV1024,I2C_F_DIV1152,I2C_F_DIV1280,I2C_F_DIV1536,
-	 I2C_F_DIV1920,I2C_F_DIV1792,I2C_F_DIV2048,I2C_F_DIV2304,
-	 I2C_F_DIV2560,I2C_F_DIV3072,I2C_F_DIV3840};
+    I2C_F_DIV136,I2C_F_DIV144,I2C_F_DIV160,I2C_F_DIV176,
+    I2C_F_DIV192,I2C_F_DIV224,I2C_F_DIV240,I2C_F_DIV256,
+    I2C_F_DIV288,I2C_F_DIV320,I2C_F_DIV352,I2C_F_DIV384,
+    I2C_F_DIV448,I2C_F_DIV480,I2C_F_DIV512,I2C_F_DIV576,
+    I2C_F_DIV640,I2C_F_DIV768,I2C_F_DIV896,I2C_F_DIV960,
+    I2C_F_DIV1024,I2C_F_DIV1152,I2C_F_DIV1280,I2C_F_DIV1536,
+    I2C_F_DIV1920,I2C_F_DIV1792,I2C_F_DIV2048,I2C_F_DIV2304,
+    I2C_F_DIV2560,I2C_F_DIV3072,I2C_F_DIV3840};
 
 
 // ------------------------------------------------------------------------------------------------------
