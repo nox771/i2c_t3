@@ -204,7 +204,7 @@
 //
 // Note: this is incompatible with multi-master buses, only use in single-master configurations
 //
-//#define I2C_AUTO_RETRY
+#define I2C_AUTO_RETRY
 
 // ======================================================================================================
 // == End User Define Section ===========================================================================
@@ -424,6 +424,7 @@ struct i2cStruct
     void (*user_onRequest)(void);            // Slave Tx Callback Function        (User)
     DMAChannel* DMA;                         // DMA Channel object                (User&ISR)
     uint32_t defTimeout;                     // Default Timeout                   (User)
+    uint32_t resetBusCount;     // bboyes, times timeout and resetBus has been called
 };
 
 
@@ -475,6 +476,7 @@ private:
     #endif
 
 public:
+
     //
     // I2C bus number - this is a local, passed as an argument to base functions
     //                  since static functions cannot see it.
@@ -861,6 +863,12 @@ public:
     //         I2C_SLAVE_TX, I2C_SLAVE_RX
     //
     inline i2c_status status(void) { return i2c->currentStatus; }
+
+
+    // this makes a Wire.resetBusCountRead() but I'd rather have and instance function
+    //
+    inline uint32_t resetBusCountRead(void) { return i2c->resetBusCount; }  // bboyes
+
 
     // ------------------------------------------------------------------------------------------------------
     // Return Status (base routine)

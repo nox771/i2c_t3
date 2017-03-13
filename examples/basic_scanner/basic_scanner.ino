@@ -25,7 +25,7 @@ void setup()
     pinMode(11,INPUT_PULLUP);       // pull pin 11 low for a more verbose result (shows both ACK and NACK)
 
     // Setup for Master mode, pins 18/19, external pullups, 400kHz, 10ms default timeout
-    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
+    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 100000);
     Wire.setDefaultTimeout(10000); // 10ms
 
     Serial.begin(115200);
