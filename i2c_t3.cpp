@@ -797,7 +797,7 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
             if(!(*(i2c->C1) & I2C_C1_MST))
             {
                 resetBus_(i2c,bus);
-                i2c->resetBusCount++;   // bboyes
+                if ((i2c->resetBusCount) < UINT32_MAX) i2c->resetBusCount++;   // bboyes max test added 2017Jun20
                 if(!(*(i2c->S) & I2C_S_BUSY))
                 {
                     // become the bus master in transmit mode (send start)
