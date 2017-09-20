@@ -1705,7 +1705,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
             if(!(status & I2C_S_IAAS))
             {
                 #if defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.5/3.6
-                    *(i2c->FLT) = flt;   // clear STOP/START intr
+                    *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
                 #endif
                 *(i2c->S) = I2C_S_IICIF; // clear intr
                 return;
@@ -1761,7 +1761,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 i2c->rxAddr = (*(i2c->D) >> 1); // read to get target addr
             }
             #if defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.5/3.6
-                *(i2c->FLT) = flt;   // clear STOP/START intr
+                *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
             #endif
             *(i2c->S) = I2C_S_IICIF; // clear intr
             return;
@@ -1801,7 +1801,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         i2c->rxBufferIndex = 0;
                         i2c->user_onReceive(i2c->rxBufferLength);
                     }
-                    *(i2c->FLT) = flt;          // clear STOP/START intr
+                    *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
                     *(i2c->S) = I2C_S_IICIF; // clear intr
                     return;
                 }
@@ -1827,7 +1827,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 i2c->rxBuffer[i2c->rxBufferLength++] = data;
         }
         #if defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.5/3.6
-            *(i2c->FLT) = flt;   // clear STOP/START intr
+            *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
         #endif
         *(i2c->S) = I2C_S_IICIF; // clear intr
     }
