@@ -135,6 +135,10 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#if defined(__AVR__)
+#error "Sorry, i2c_t3 only works on Teensy LC and 3.x boards.  Use Wire for Teensy 2.0."
+#endif
+
 #if !defined(I2C_T3_H) && (defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__) || \
                            defined(__MK64FX512__) || defined(__MK66FX1M0__)) // 3.0/3.1-3.2/LC/3.5/3.6
 #define I2C_T3_H
