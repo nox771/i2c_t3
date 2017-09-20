@@ -2,6 +2,9 @@
     ------------------------------------------------------------------------------------------------------
     i2c_t3 - I2C library for Teensy 3.x & LC
 
+    - (v9.3) Modified 20Sep17 by Brian (nox771 at gmail.com)
+        - Fixed Slave ISR for LC/3.5/3.6
+
     - (v9.2) Modified 29Dec16 by Brian (nox771 at gmail.com)
         - improved resetBus() function to reset C1 state (thanks hw999)
 
