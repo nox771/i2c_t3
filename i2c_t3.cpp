@@ -2,6 +2,11 @@
     ------------------------------------------------------------------------------------------------------
     i2c_t3 - I2C library for Teensy 3.x & LC
 
+    - (v9.4) Modified 25Sep17 by Brian (nox771 at gmail.com)
+        - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART
+        - Fixed nested Wire calls during Slave ISR receive (calling Wire inside Wire1 Slave ISR)
+        - Added uint8_t and char array read functions - Wire.read(databuf, count);
+
     - (v9.3) Modified 20Sep17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6
 
@@ -1322,28 +1327,27 @@ size_t i2c_t3::write(uint8_t data)
 
 
 // ------------------------------------------------------------------------------------------------------
-// Write Array - write length number of bytes from data array to Tx buffer
+// Write Array - write count number of bytes from data array to Tx buffer
 // return: #bytes written = success, 0=fail
 // parameters:
 //      data = pointer to uint8_t array of data
-//      length = number of bytes to write
+//      count = number of bytes to write
 //
-size_t i2c_t3::write(const uint8_t* data, size_t quantity)
+size_t i2c_t3::write(const uint8_t* data, size_t count)
 {
     if(i2c->txBufferLength < I2C_TX_BUFFER_LENGTH)
     {
         size_t avail = I2C_TX_BUFFER_LENGTH - i2c->txBufferLength;
         uint8_t* dest = i2c->txBuffer + i2c->txBufferLength;
 
-        if(quantity > avail)
+        if(count > avail)
         {
-            quantity = avail; // truncate to space avail if needed
+            count = avail; // truncate to space avail if needed
             setWriteError();
         }
-        for(size_t count=quantity; count; count--)
-            *dest++ = *data++;
-        i2c->txBufferLength += quantity;
-        return quantity;
+        memcpy(dest, data, count);
+        i2c->txBufferLength += count;
+        return count;
     }
     setWriteError();
     return 0;
@@ -1358,6 +1362,29 @@ int i2c_t3::read_(struct i2cStruct* i2c)
 {
     if(i2c->rxBufferIndex >= i2c->rxBufferLength) return -1;
     return i2c->rxBuffer[i2c->rxBufferIndex++];
+}
+
+
+// ------------------------------------------------------------------------------------------------------
+// Read Array - read count number of bytes from Rx buffer to data array
+// return: #bytes read
+// parameters:
+//      data = pointer to uint8_t array of data
+//      count = number of bytes to write
+//
+size_t i2c_t3::read_(struct i2cStruct* i2c, uint8_t* data, size_t count)
+{
+    if(i2c->rxBufferLength > i2c->rxBufferIndex)
+    {
+        size_t avail = i2c->rxBufferLength - i2c->rxBufferIndex;
+        uint8_t* src = i2c->rxBuffer + i2c->rxBufferIndex;
+
+        if(count > avail) count = avail; // truncate to data avail if needed
+        memcpy(data, src, count);
+        i2c->rxBufferIndex += count;
+        return count;
+    }
+    return 0;
 }
 
 
@@ -1793,19 +1820,20 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
         else if(i2c->currentStatus == I2C_SLAVE_RX)
         {
             #if defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.5/3.6
-                if(flt & I2C_FLT_STOPF) // STOP detected, run callback
+                if(flt & (I2C_FLT_STOPF|I2C_FLT_STARTF)) // STOP/START detected, run callback
                 {
                     // LC (MKL26) appears to have the same I2C_FLT reg definition as 3.6 (K66)
                     // There is both STOPF and STARTF and they are both enabled via SSIE, and they must both
                     // be cleared in order to work
+                    *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
+                    *(i2c->FLT) &= ~I2C_FLT_SSIE;                   // disable STOP/START intr (will re-enable on next IAAS)
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                     i2c->currentStatus = I2C_WAITING;
                     if(i2c->user_onReceive != nullptr)
                     {
                         i2c->rxBufferIndex = 0;
                         i2c->user_onReceive(i2c->rxBufferLength);
                     }
-                    *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
-                    *(i2c->S) = I2C_S_IICIF; // clear intr
                     return;
                 }
             #endif

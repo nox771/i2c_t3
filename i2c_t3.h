@@ -909,14 +909,17 @@ public:
     inline size_t write(int n)           { return write((uint8_t)n); }
 
     // ------------------------------------------------------------------------------------------------------
-    // Write Array - write length number of bytes from data array to Tx buffer
+    // Write Array - write count number of bytes from data array to Tx buffer
     // return: #bytes written = success, 0=fail
     // parameters:
     //      data = pointer to uint8_t (or char) array of data
-    //      length = number of bytes to write
+    //      count = number of bytes to write
     //
-    size_t write(const uint8_t* data, size_t quantity);
-    inline size_t write(const char* str) { return write((const uint8_t*)str, strlen(str)); }
+    // As a special case C-strings (null terminated) can be written without a count byte
+    //
+    size_t write(const uint8_t* data, size_t count);
+    inline size_t write(const char* str, size_t count) { return write((const uint8_t*)str, count); }
+    inline size_t write(const char* str) { return write((const uint8_t*)str, strlen(str)+1); } // write C-string
 
     // ------------------------------------------------------------------------------------------------------
     // Available - returns number of remaining available bytes in Rx buffer
@@ -933,6 +936,17 @@ public:
     // return: data, -1 if buffer empty
     //
     inline int read(void) { return read_(i2c); }
+
+    // ------------------------------------------------------------------------------------------------------
+    // Read Array - read count number of bytes from Rx buffer to data array
+    // return: #bytes read
+    // parameters:
+    //      data = pointer to uint8_t (or char) array of data
+    //      count = number of bytes to read
+    //
+    static size_t read_(struct i2cStruct* i2c, uint8_t* data, size_t count);
+    inline size_t read(uint8_t* data, size_t count) { return read_(i2c, data, count); }
+    inline size_t read(char* str, size_t count) { return read_(i2c, (uint8_t*)str, count); }
 
     // ------------------------------------------------------------------------------------------------------
     // Peek (base routine)
