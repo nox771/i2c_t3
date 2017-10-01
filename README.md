@@ -167,6 +167,7 @@ Examples are divided into two categories, **basic** and **advanced**.  Basic exa
 * **basic_scanner** - this creates a Master device which will scan the address space and report all devices which ACK.  It only scans the Wire bus.
 * **basic_master_mux** - this creates a Master device which can communicate using the Wire bus on two sets of pins, and change pins on-the-fly.  This type of operation is useful when communicating with Slaves with fixed, common addresses (allowing one common-address Slave on each set of pins).
 * **basic_interrupt** - this creates a Master device which is setup to periodically read/write from a Slave device using a timer interrupt.
+* **basic_echo** - this creates a device which listens on Wire1 and then echos that incoming data out on Wire. It demonstrates non-blocking nested Wire calls (calling Wire inside Wire1 ISR).
 * **advanced_master** - this creates a Master device which is setup to talk to the Slave device given in the **advanced_slave** sketch.  It adds a protocol layer on-top of basic I2C communication and has a series of more complex tests.
 * **advanced_slave** - this creates a Slave device which responds to the **advanced_master** sketch.  It responds to a protocol layer on-top of basic I2C communication.
 * **advanced_scanner** - this creates a Master device which will scan the address space and report all devices which ACK.  It scans all existing I2C buses.
@@ -461,4 +462,8 @@ These are libraries which are known to be compatible with this I2C library. They
 * Adafruit FRAM board - https://bitbucket.org/JezWeston/adafruit_fram_i2c_t3 
 * Adafruit BNO055 library - http://forums.adafruit.com/viewtopic.php?f=19&t=92153&sid=883bc291b6b08f4a51e018675e15dd69
 * Micro Crystal Real Time Clock Module RV-3029-C2 - https://mega.nz/#!NRsGBbwT!ImKEaTJhMQPQYlgDswXHYw7203Hw25h0yY6zY7MStmc
+* MPU-9250 - https://github.com/bolderflight/MPU9250
+* BME280 - https://github.com/bolderflight/BME280
+* AMS5812 - https://github.com/bolderflight/AMS5812
+* AMS5915 - https://github.com/bolderflight/AMS5915
 
