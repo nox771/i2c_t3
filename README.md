@@ -398,12 +398,12 @@ _**Wire.write(data);**_ - write data byte to Tx buffer
     * data = data byte 
 
 
-_**Wire.write(data, length);**_ - write length number of bytes from data array to Tx buffer
+_**Wire.write(data, count);**_ - write count number of bytes from data array to Tx buffer
 
 * return: #bytes written = success, 0=fail
 * parameters:
     * data = pointer to uint8_t (or char) array of data
-    * length = number of bytes to write 
+    * count = number of bytes to write 
 
 
 _**Wire.available();**_ - returns number of remaining available bytes in Rx buffer
@@ -414,6 +414,14 @@ _**Wire.available();**_ - returns number of remaining available bytes in Rx buff
 _**Wire.read();**_ - returns next data byte (signed int) from Rx buffer
 
 * return: data, -1 if buffer empty
+
+
+**Wire.read(data, count);** - read count number of bytes from Rx buffer to data array
+
+* return: #bytes read
+* parameters:
+    * data = pointer to uint8_t (or char) array of data
+    * count = number of bytes to read 
 
 
 _**Wire.peek();**_ - returns next data byte (signed int) from Rx buffer without removing it from Rx buffer
