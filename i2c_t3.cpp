@@ -1,124 +1,11 @@
 /*
     ------------------------------------------------------------------------------------------------------
     i2c_t3 - I2C library for Teensy 3.x & LC
+    Copyright (c) 2013-2017, Brian (nox771 at gmail.com)
 
-    - (v9.3) Modified 20Sep17 by Brian (nox771 at gmail.com)
-        - Fixed Slave ISR for LC/3.5/3.6
+    - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
 
-    - (v9.2) Modified 29Dec16 by Brian (nox771 at gmail.com)
-        - improved resetBus() function to reset C1 state (thanks hw999)
-
-    - (v9.1) Modified 16Oct16 by Brian (nox771 at gmail.com)
-        - applied two fixes due to bug reports:
-            - removed I2C_F_DIV120 setting (120 divide-ratio) for I2C clock
-            - disabled I2C_AUTO_RETRY by default (setting remains but must be manually enabled)
-
-    - (v9) Modified 01Jul16 by Brian (nox771 at gmail.com)
-        - Added support for Teensy 3.5/3.6:
-            - fully supported (Master/Slave modes, IMM/ISR/DMA operation)
-            - supports all available pin/bus options on Wire/Wire1/Wire2/Wire3
-        - Fixed LC slave bug, whereby it was incorrectly detecting STOPs directed to other slaves
-        - I2C rate is now set using a much more flexible method than previously used (this is partially
-          motivated by increasing device count and frequencies).  As a result, the fixed set of rate
-          enums are no longer needed (however they are currently still supported), and desired I2C
-          frequency can be directly specified, eg. for 400kHz, I2C_RATE_400 can be replaced by 400000.
-          Some setRate() functions are deprecated due to these changes.
-
-    - (v8) Modified 02Apr15 by Brian (nox771 at gmail.com)
-        - added support for Teensy LC:
-            - fully supported (Master/Slave modes, IMM/ISR/DMA operation)
-            - Wire: pins 16/17 or 18/19, rate limited to I2C_RATE_1200
-            - Wire1: pins 22/23, rate limited to I2C_RATE_2400
-        - added timeout on acquiring bus (prevents lockup when bus cannot be acquired)
-        - added setDefaultTimeout() function for setting the default timeout to apply to all commands
-        - added resetBus() function for toggling SCL to release stuck Slave devices
-        - added setRate(rate) function, similar to setClock(freq), but using rate specifiers (does not
-                require specifying busFreq)
-        - added I2C_AUTO_RETRY user define
-
-    - (v7) Modified 09Jan15 by Brian (nox771 at gmail.com)
-        - added support for F_BUS frequencies: 60MHz, 56MHz, 48MHz, 36MHz, 24MHz, 16MHz, 8MHz, 4MHz, 2MHz
-        - added new rates: I2C_RATE_1800, I2C_RATE_2800, I2C_RATE_3000
-        - added new priority escalation - in cases where I2C ISR is blocked by having a lower priority than
-                                          calling function, the I2C will either adjust I2C ISR to a higher priority,
-                                          or switch to Immediate mode as needed.
-        - added new operating mode control - I2C can be set to operate in ISR mode, DMA mode (Master only),
-                                             or Immediate Mode (Master only)
-        - added new begin() functions to allow setting the initial operating mode:
-            - begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
-            - begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
-        - added new functions:
-            - uint8_t setOpMode(i2c_op_mode opMode) - used to change operating mode on the fly (only when bus is idle)
-            - void sendTransmission() - non-blocking Tx with implicit I2C_STOP, added for symmetry with endTransmission()
-            - uint8_t setRate(uint32_t busFreq, i2c_rate rate) - used to set I2C clock dividers to get desired rate, i2c_rate argument
-            - uint8_t setRate(uint32_t busFreq, uint32_t i2cFreq) - used to set I2C clock dividers to get desired SCL freq, uint32_t argument
-                                                                    (quantized to nearest i2c_rate)
-        - added new Wire compatibility functions:
-            - void setClock(uint32_t i2cFreq) - (note: degenerate form of setRate() with busFreq == F_BUS)
-            - uint8_t endTransmission(uint8_t sendStop)
-            - uint8_t requestFrom(uint8_t addr, uint8_t len)
-            - uint8_t requestFrom(uint8_t addr, uint8_t len, uint8_t sendStop)
-        - fixed bug in Slave Range code whereby onRequest() callback occurred prior to updating rxAddr instead of after
-        - fixed bug in arbitration, was missing from Master Tx mode
-        - removed I2C1 defines (now included in kinetis.h)
-        - removed all debug code (eliminates rbuf dependency)
-
-    - (v6) Modified 16Jan14 by Brian (nox771 at gmail.com)
-        - all new structure using dereferenced pointers instead of hardcoding. This allows functions
-          (including ISRs) to be reused across multiple I2C buses.  Most functions moved to static,
-          which in turn are called by inline user functions.  Added new struct (i2cData) for holding all
-          bus information.
-        - added support for Teensy 3.1 and I2C1 interface on pins 29/30 and 26/31.
-        - added header define (I2C_BUS_ENABLE n) to control number of enabled buses (eg. both I2C0 & I2C1
-          or just I2C0).  When using only I2C0 the code and ram usage will be lower.
-        - added interrupt flag (toggles pin high during ISR) with independent defines for I2C0 and
-          I2C1 (refer to header file), useful for logic analyzer trigger
-
-    - (v5) Modified 09Jun13 by Brian (nox771 at gmail.com)
-        - fixed bug in ISR timeout code in which timeout condition could fail to reset in certain cases
-        - fixed bug in Slave mode in sda_rising_isr attach, whereby it was not getting attached on the addr byte
-        - moved debug routines so they are entirely defined internal to the library (no end user code req'd)
-        - debug routines now use IntervalTimer library
-        - added support for range of Slave addresses
-        - added getRxAddr() for Slave using addr range to determine its called address
-        - removed virtual keyword from all functions (is not a base class)
-
-    - (v1-v4) Modified 26Feb13 by Brian (nox771 at gmail.com)
-        - Reworked begin function:
-            - added option for pins to use (SCL:SDA on 19:18 or 16:17 - note pin order difference)
-            - added option for internal pullup - as mentioned in previous code pullup is very strong,
-                                                 approx 190 ohms, but is possibly useful for high speed I2C
-            - added option for rates - 100kHz, 200kHz, 300kHz, 400kHz, 600kHz, 800kHz, 1MHz, 1.2MHz, <-- 24/48MHz bus
-                                       1.5MHz, 2.0MHz, 2.4MHz                                        <-- 48MHz bus only
-        - Removed string.h dependency (memcpy)
-        - Changed Master modes to interrupt driven
-        - Added non-blocking Tx/Rx routines, and status/done/finish routines:
-            - sendTransmission() - non-blocking transmit
-            - sendRequest() - non-blocking receive
-            - status() - reports current status
-            - done() - indicates Tx/Rx complete (for main loop polling if I2C is running in background)
-            - finish() - loops until Tx/Rx complete or bus error
-        - Added readByte()/peekByte() for uint8_t return values (note: returns 0 instead of -1 if buf empty)
-        - Added fixes for Slave Rx mode - in short Slave Rx on this part is fubar
-          (as proof, notice the difference in the I2Cx_FLT register in the KL25 Sub-Family parts)
-            - the SDA-rising ISR hack can work but only detects STOP conditons.
-              A slave Rx followed by RepSTART won't be detected since bus remains busy.
-              To fix this if IAAS occurs while already in Slave Rx mode then it will
-              assume RepSTART occurred and trigger onReceive callback.
-        - Separated Tx/Rx buffer sizes for asymmetric devices (adjustable in i2c_t3.h)
-        - Changed Tx/Rx buffer indicies to size_t to allow for large (>256 byte) buffers
-        - Left debug routines in place (controlled via header defines - default is OFF).  If debug is
-            enabled, note that it can easily overrun the Debug queue on large I2C transfers, yielding
-            garbage output.  Adjust ringbuf size (in rbuf.h) and possibly PIT interrupt rate to adjust
-            data flow to Serial (note also the buffer in Serial can overflow if written too quickly).
-        - Added getError() function to return Wire error code
-        - Added pinConfigure() function for changing pins on the fly (only when bus not busy)
-        - Added timeouts to endTransmission(), requestFrom(), and finish()
-    ------------------------------------------------------------------------------------------------------
-    Some code segments derived from:
-    TwoWire.cpp - TWI/I2C library for Wiring & Arduino
-    Copyright (c) 2006 Nicholas Zambetti.  All right reserved.
-    Modified 2012 by Todd Krein (todd@krein.org) to implement repeated starts
+    Full changelog at end of file
     ------------------------------------------------------------------------------------------------------
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -133,6 +20,7 @@
     You should have received a copy of the GNU Lesser General Public
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    ------------------------------------------------------------------------------------------------------
 */
 
 #if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__) || \
@@ -1322,28 +1210,27 @@ size_t i2c_t3::write(uint8_t data)
 
 
 // ------------------------------------------------------------------------------------------------------
-// Write Array - write length number of bytes from data array to Tx buffer
+// Write Array - write count number of bytes from data array to Tx buffer
 // return: #bytes written = success, 0=fail
 // parameters:
 //      data = pointer to uint8_t array of data
-//      length = number of bytes to write
+//      count = number of bytes to write
 //
-size_t i2c_t3::write(const uint8_t* data, size_t quantity)
+size_t i2c_t3::write(const uint8_t* data, size_t count)
 {
     if(i2c->txBufferLength < I2C_TX_BUFFER_LENGTH)
     {
         size_t avail = I2C_TX_BUFFER_LENGTH - i2c->txBufferLength;
         uint8_t* dest = i2c->txBuffer + i2c->txBufferLength;
 
-        if(quantity > avail)
+        if(count > avail)
         {
-            quantity = avail; // truncate to space avail if needed
+            count = avail; // truncate to space avail if needed
             setWriteError();
         }
-        for(size_t count=quantity; count; count--)
-            *dest++ = *data++;
-        i2c->txBufferLength += quantity;
-        return quantity;
+        memcpy(dest, data, count);
+        i2c->txBufferLength += count;
+        return count;
     }
     setWriteError();
     return 0;
@@ -1358,6 +1245,29 @@ int i2c_t3::read_(struct i2cStruct* i2c)
 {
     if(i2c->rxBufferIndex >= i2c->rxBufferLength) return -1;
     return i2c->rxBuffer[i2c->rxBufferIndex++];
+}
+
+
+// ------------------------------------------------------------------------------------------------------
+// Read Array - read count number of bytes from Rx buffer to data array
+// return: #bytes read
+// parameters:
+//      data = pointer to uint8_t array of data
+//      count = number of bytes to write
+//
+size_t i2c_t3::read_(struct i2cStruct* i2c, uint8_t* data, size_t count)
+{
+    if(i2c->rxBufferLength > i2c->rxBufferIndex)
+    {
+        size_t avail = i2c->rxBufferLength - i2c->rxBufferIndex;
+        uint8_t* src = i2c->rxBuffer + i2c->rxBufferIndex;
+
+        if(count > avail) count = avail; // truncate to data avail if needed
+        memcpy(data, src, count);
+        i2c->rxBufferIndex += count;
+        return count;
+    }
+    return 0;
 }
 
 
@@ -1793,19 +1703,20 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
         else if(i2c->currentStatus == I2C_SLAVE_RX)
         {
             #if defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.5/3.6
-                if(flt & I2C_FLT_STOPF) // STOP detected, run callback
+                if(flt & (I2C_FLT_STOPF|I2C_FLT_STARTF)) // STOP/START detected, run callback
                 {
                     // LC (MKL26) appears to have the same I2C_FLT reg definition as 3.6 (K66)
                     // There is both STOPF and STARTF and they are both enabled via SSIE, and they must both
                     // be cleared in order to work
+                    *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
+                    *(i2c->FLT) &= ~I2C_FLT_SSIE;                   // disable STOP/START intr (will re-enable on next IAAS)
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                     i2c->currentStatus = I2C_WAITING;
                     if(i2c->user_onReceive != nullptr)
                     {
                         i2c->rxBufferIndex = 0;
                         i2c->user_onReceive(i2c->rxBufferLength);
                     }
-                    *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
-                    *(i2c->S) = I2C_S_IICIF; // clear intr
                     return;
                 }
             #endif
@@ -1916,3 +1827,129 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
 #endif
 
 #endif // i2c_t3
+
+/*
+   ------------------------------------------------------------------------------------------------------
+   Changelog
+   ------------------------------------------------------------------------------------------------------
+
+    - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
+        - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART
+        - Fixed nested Wire calls during Slave ISR receive (calling Wire inside Wire1 Slave ISR)
+        - Added uint8_t and char array read functions - Wire.read(databuf, count);
+
+    - (v9.3) Modified 20Sep17 by Brian (nox771 at gmail.com)
+        - Fixed Slave ISR for LC/3.5/3.6
+
+    - (v9.2) Modified 29Dec16 by Brian (nox771 at gmail.com)
+        - improved resetBus() function to reset C1 state (thanks hw999)
+
+    - (v9.1) Modified 16Oct16 by Brian (nox771 at gmail.com)
+        - applied two fixes due to bug reports:
+            - removed I2C_F_DIV120 setting (120 divide-ratio) for I2C clock
+            - disabled I2C_AUTO_RETRY by default (setting remains but must be manually enabled)
+
+    - (v9) Modified 01Jul16 by Brian (nox771 at gmail.com)
+        - Added support for Teensy 3.5/3.6:
+            - fully supported (Master/Slave modes, IMM/ISR/DMA operation)
+            - supports all available pin/bus options on Wire/Wire1/Wire2/Wire3
+        - Fixed LC slave bug, whereby it was incorrectly detecting STOPs directed to other slaves
+        - I2C rate is now set using a much more flexible method than previously used (this is partially
+          motivated by increasing device count and frequencies).  As a result, the fixed set of rate
+          enums are no longer needed (however they are currently still supported), and desired I2C
+          frequency can be directly specified, eg. for 400kHz, I2C_RATE_400 can be replaced by 400000.
+          Some setRate() functions are deprecated due to these changes.
+
+    - (v8) Modified 02Apr15 by Brian (nox771 at gmail.com)
+        - added support for Teensy LC:
+            - fully supported (Master/Slave modes, IMM/ISR/DMA operation)
+            - Wire: pins 16/17 or 18/19, rate limited to I2C_RATE_1200
+            - Wire1: pins 22/23, rate limited to I2C_RATE_2400
+        - added timeout on acquiring bus (prevents lockup when bus cannot be acquired)
+        - added setDefaultTimeout() function for setting the default timeout to apply to all commands
+        - added resetBus() function for toggling SCL to release stuck Slave devices
+        - added setRate(rate) function, similar to setClock(freq), but using rate specifiers (does not
+                require specifying busFreq)
+        - added I2C_AUTO_RETRY user define
+
+    - (v7) Modified 09Jan15 by Brian (nox771 at gmail.com)
+        - added support for F_BUS frequencies: 60MHz, 56MHz, 48MHz, 36MHz, 24MHz, 16MHz, 8MHz, 4MHz, 2MHz
+        - added new rates: I2C_RATE_1800, I2C_RATE_2800, I2C_RATE_3000
+        - added new priority escalation - in cases where I2C ISR is blocked by having a lower priority than
+                                          calling function, the I2C will either adjust I2C ISR to a higher priority,
+                                          or switch to Immediate mode as needed.
+        - added new operating mode control - I2C can be set to operate in ISR mode, DMA mode (Master only),
+                                             or Immediate Mode (Master only)
+        - added new begin() functions to allow setting the initial operating mode:
+            - begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
+            - begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
+        - added new functions:
+            - uint8_t setOpMode(i2c_op_mode opMode) - used to change operating mode on the fly (only when bus is idle)
+            - void sendTransmission() - non-blocking Tx with implicit I2C_STOP, added for symmetry with endTransmission()
+            - uint8_t setRate(uint32_t busFreq, i2c_rate rate) - used to set I2C clock dividers to get desired rate, i2c_rate argument
+            - uint8_t setRate(uint32_t busFreq, uint32_t i2cFreq) - used to set I2C clock dividers to get desired SCL freq, uint32_t argument
+                                                                    (quantized to nearest i2c_rate)
+        - added new Wire compatibility functions:
+            - void setClock(uint32_t i2cFreq) - (note: degenerate form of setRate() with busFreq == F_BUS)
+            - uint8_t endTransmission(uint8_t sendStop)
+            - uint8_t requestFrom(uint8_t addr, uint8_t len)
+            - uint8_t requestFrom(uint8_t addr, uint8_t len, uint8_t sendStop)
+        - fixed bug in Slave Range code whereby onRequest() callback occurred prior to updating rxAddr instead of after
+        - fixed bug in arbitration, was missing from Master Tx mode
+        - removed I2C1 defines (now included in kinetis.h)
+        - removed all debug code (eliminates rbuf dependency)
+
+    - (v6) Modified 16Jan14 by Brian (nox771 at gmail.com)
+        - all new structure using dereferenced pointers instead of hardcoding. This allows functions
+          (including ISRs) to be reused across multiple I2C buses.  Most functions moved to static,
+          which in turn are called by inline user functions.  Added new struct (i2cData) for holding all
+          bus information.
+        - added support for Teensy 3.1 and I2C1 interface on pins 29/30 and 26/31.
+        - added header define (I2C_BUS_ENABLE n) to control number of enabled buses (eg. both I2C0 & I2C1
+          or just I2C0).  When using only I2C0 the code and ram usage will be lower.
+        - added interrupt flag (toggles pin high during ISR) with independent defines for I2C0 and
+          I2C1 (refer to header file), useful for logic analyzer trigger
+
+    - (v5) Modified 09Jun13 by Brian (nox771 at gmail.com)
+        - fixed bug in ISR timeout code in which timeout condition could fail to reset in certain cases
+        - fixed bug in Slave mode in sda_rising_isr attach, whereby it was not getting attached on the addr byte
+        - moved debug routines so they are entirely defined internal to the library (no end user code req'd)
+        - debug routines now use IntervalTimer library
+        - added support for range of Slave addresses
+        - added getRxAddr() for Slave using addr range to determine its called address
+        - removed virtual keyword from all functions (is not a base class)
+
+    - (v1-v4) Modified 26Feb13 by Brian (nox771 at gmail.com)
+        - Reworked begin function:
+            - added option for pins to use (SCL:SDA on 19:18 or 16:17 - note pin order difference)
+            - added option for internal pullup - as mentioned in previous code pullup is very strong,
+                                                 approx 190 ohms, but is possibly useful for high speed I2C
+            - added option for rates - 100kHz, 200kHz, 300kHz, 400kHz, 600kHz, 800kHz, 1MHz, 1.2MHz, <-- 24/48MHz bus
+                                       1.5MHz, 2.0MHz, 2.4MHz                                        <-- 48MHz bus only
+        - Removed string.h dependency (memcpy)
+        - Changed Master modes to interrupt driven
+        - Added non-blocking Tx/Rx routines, and status/done/finish routines:
+            - sendTransmission() - non-blocking transmit
+            - sendRequest() - non-blocking receive
+            - status() - reports current status
+            - done() - indicates Tx/Rx complete (for main loop polling if I2C is running in background)
+            - finish() - loops until Tx/Rx complete or bus error
+        - Added readByte()/peekByte() for uint8_t return values (note: returns 0 instead of -1 if buf empty)
+        - Added fixes for Slave Rx mode - in short Slave Rx on this part is fubar
+          (as proof, notice the difference in the I2Cx_FLT register in the KL25 Sub-Family parts)
+            - the SDA-rising ISR hack can work but only detects STOP conditons.
+              A slave Rx followed by RepSTART won't be detected since bus remains busy.
+              To fix this if IAAS occurs while already in Slave Rx mode then it will
+              assume RepSTART occurred and trigger onReceive callback.
+        - Separated Tx/Rx buffer sizes for asymmetric devices (adjustable in i2c_t3.h)
+        - Changed Tx/Rx buffer indicies to size_t to allow for large (>256 byte) buffers
+        - Left debug routines in place (controlled via header defines - default is OFF).  If debug is
+            enabled, note that it can easily overrun the Debug queue on large I2C transfers, yielding
+            garbage output.  Adjust ringbuf size (in rbuf.h) and possibly PIT interrupt rate to adjust
+            data flow to Serial (note also the buffer in Serial can overflow if written too quickly).
+        - Added getError() function to return Wire error code
+        - Added pinConfigure() function for changing pins on the fly (only when bus not busy)
+        - Added timeouts to endTransmission(), requestFrom(), and finish()
+
+    ------------------------------------------------------------------------------------------------------
+*/

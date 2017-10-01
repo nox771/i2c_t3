@@ -142,8 +142,7 @@ void loop()
             Wire.beginTransmission(target);     // slave addr
             Wire.write(WRITE);                  // WRITE command
             Wire.write(addr);                   // memory address
-            for(len = 0; len < 32; len++)       // write 32 byte block
-                Wire.write(databuf[len]);
+            Wire.write(databuf, 32);            // write 32 byte block
             Wire.endTransmission();             // blocking write (when not specified I2C_STOP is implicit)
 
             print_i2c_status();                 // print I2C final status
@@ -192,8 +191,7 @@ void loop()
         Wire.beginTransmission(target);         // slave addr
         Wire.write(WRITE);                      // WRITE command
         Wire.write(addr);                       // memory address
-        for(len = 0; len < 256; len++)          // write 256 byte block
-            Wire.write(databuf[len]);
+        Wire.write(databuf, 256);               // write 256 byte block
         Wire.endTransmission(I2C_STOP);         // blocking write (using explicit I2C_STOP)
 
         print_i2c_status();                     // print I2C final status
@@ -245,8 +243,7 @@ void loop()
         Wire.beginTransmission(target);         // slave addr
         Wire.write(WRITE);                      // WRITE command
         Wire.write(addr);                       // memory address
-        for(len = 0; len < 256; len++)          // write 256 byte block
-            Wire.write(databuf[len]);
+        Wire.write(databuf, 256);               // write 256 byte block
         Wire.sendTransmission();                // NON-blocking write (when not specified I2C_STOP is implicit)
 
         Serial.print("...write sent, counting while waiting for Wire.done()...\n");
@@ -311,8 +308,7 @@ void loop()
         Wire.beginTransmission(target);         // slave addr
         Wire.write(WRITE);                      // WRITE command
         Wire.write(addr);                       // memory address
-        for(len = 0; len < 256; len++)          // write 256 byte block
-            Wire.write(databuf[len]);
+        Wire.write(databuf, 256);               // write 256 byte block
         Wire.sendTransmission();                // NON-blocking write (when not specified I2C_STOP is implicit)
 
         Serial.print("...write sent, counting while waiting for Wire.done()...\n");
@@ -516,8 +512,7 @@ void test_rate(uint8_t target, uint32_t rate, uint8_t& fail)
             Wire.beginTransmission(target); // slave addr
             Wire.write(WRITE);              // WRITE command
             Wire.write(0);                  // memory address
-            for(len = 0; len < 256; len++)  // write block
-                Wire.write(databuf[len]);
+            Wire.write(databuf, 256);       // write 256 byte block
         
             // Write to Slave
             elapsedMicros deltaT;

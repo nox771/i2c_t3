@@ -23,7 +23,7 @@ IntervalTimer slaveTimer;
 // Memory
 #define MEM_LEN 32
 char databuf[MEM_LEN];
-size_t idx, count=0;
+size_t count=0;
 uint8_t target=0x66;
 
 void setup()
@@ -60,8 +60,7 @@ void rwSlave(void)
     
     // Transmit to Slave
     Wire.beginTransmission(target);         // Slave address
-    for(idx = 0; idx <= strlen(databuf); idx++) // Write string to I2C Tx buffer (incl. string null at end)
-        Wire.write(databuf[idx]);
+    Wire.write(databuf,strlen(databuf)+1);  // Write string to I2C Tx buffer (incl. string null at end)
     Wire.endTransmission();                 // Transmit to Slave
 
     // Check if error occured
@@ -78,9 +77,7 @@ void rwSlave(void)
         else
         {
             // If no error then read Rx data into buffer and print
-            idx = 0;
-            while(Wire.available())
-                databuf[idx++] = Wire.readByte();
+            Wire.read(databuf, Wire.available());
             Serial.printf("'%s' OK\n",databuf);
         }
     }

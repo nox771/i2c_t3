@@ -116,12 +116,8 @@ void receiveEvent(size_t count)
         switch(cmd)
         {
         case WRITE:
-            addr = Wire.readByte();                // grab addr
-            while(Wire.available())
-                if(addr < MEM_LEN)                 // drop data beyond mem boundary
-                    mem[addr++] = Wire.readByte(); // copy data to mem
-                else
-                    Wire.readByte();               // drop data if mem full
+            addr = Wire.readByte();         // grab addr
+            Wire.read(&mem[addr], count-2); // copy Rx data to databuf
             break;
 
         case READ:

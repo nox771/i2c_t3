@@ -71,8 +71,7 @@ void loop()
         
         // Transmit to Slave
         Wire.beginTransmission(target);   // Slave address
-        for(idx = 0; idx <= strlen(databuf); idx++) // Write string to I2C Tx buffer (incl. string null at end)
-            Wire.write(databuf[idx]);
+        Wire.write(databuf,strlen(databuf)+1); // Write string to I2C Tx buffer (incl. string null at end)
         Wire.endTransmission();           // Transmit to Slave
 
         // Check if error occured
