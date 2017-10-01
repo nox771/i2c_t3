@@ -18,7 +18,7 @@ void requestEvent(void);
 
 // Memory
 #define MEM_LEN 256
-uint8_t databuf[MEM_LEN];
+char databuf[MEM_LEN];
 volatile uint8_t received;
 
 //
@@ -48,7 +48,7 @@ void loop()
     if(received)
     {
         digitalWrite(LED_BUILTIN,HIGH);
-        Serial.printf("Slave received: '%s'\n", (char*)databuf);
+        Serial.printf("Slave received: '%s'\n", databuf);
         received = 0;
         digitalWrite(LED_BUILTIN,LOW);
     }
@@ -59,17 +59,8 @@ void loop()
 //
 void receiveEvent(size_t count)
 {
-    size_t idx=0;
-    
-    while(idx < count)
-    {
-        if(idx < MEM_LEN)                     // drop data beyond mem boundary
-            databuf[idx++] = Wire.readByte(); // copy data to mem
-        else
-            Wire.readByte();                  // drop data if mem full
-    }
-    
-    received = count; // set received flag to count, this triggers print in main loop
+    Wire.read(databuf, count);  // copy Rx data to databuf
+    received = count;           // set received flag to count, this triggers print in main loop
 }
 
 //

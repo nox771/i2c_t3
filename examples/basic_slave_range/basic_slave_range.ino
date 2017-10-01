@@ -65,18 +65,9 @@ void loop()
 //
 void receiveEvent(size_t count)
 {
-    size_t idx=0;
-    target = Wire.getRxAddr();                // getRxAddr() is used to obtain Slave address
-       
-    while(idx < count)
-    {
-        if(idx < MEM_LEN)                     // drop data beyond mem boundary
-            databuf[idx++] = Wire.readByte(); // copy data to mem
-        else
-            Wire.readByte();                  // drop data if mem full
-    }
-    
-    received = count; // set received flag to count, this triggers print in main loop
+    target = Wire.getRxAddr();  // getRxAddr() is used to obtain Slave address
+    Wire.read(databuf, count);  // copy Rx data to databuf
+    received = count;           // set received flag to count, this triggers print in main loop
 }
 
 //
@@ -84,6 +75,6 @@ void receiveEvent(size_t count)
 //
 void requestEvent(void)
 {
-    Wire.write(&databuf[0], MEM_LEN); // fill Tx buffer (send full mem)
+    Wire.write(databuf, MEM_LEN); // fill Tx buffer (send full mem)
 }
 

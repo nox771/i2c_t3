@@ -182,53 +182,35 @@ void rwSlave(uint8_t target)
 // Slave ISR handlers
 //
 #if I2C_BUS_NUM >= 2
-void receiveEvent1(size_t count)              // Handle Wire1 Slave Rx Event (incoming I2C request/data)
+void receiveEvent1(size_t count)  // Handle Wire1 Slave Rx Event (incoming I2C request/data)
 {
-    for(size_t idx=0; idx < count; idx++)
-    {
-        if(idx < MEM_LEN)                     // drop data beyond mem boundary
-            mem1[idx] = Wire1.readByte();     // copy data to mem
-        else
-            Wire1.readByte();                 // drop data if mem full
-    }
+    Wire1.read(mem1, count);      // copy Rx data to databuf
 }
-void requestEvent1(void)                      // Handle Wire1 Tx Event (outgoing I2C data)
+void requestEvent1(void)          // Handle Wire1 Tx Event (outgoing I2C data)
 {
-    Wire1.write(mem1, MEM_LEN);               // fill Tx buffer (send full mem)
+    Wire1.write(mem1, MEM_LEN);   // fill Tx buffer (send full mem)
 }
 #endif
 
 #if I2C_BUS_NUM >= 3
-void receiveEvent2(size_t count)              // Handle Wire2 Slave Rx Event (incoming I2C request/data)
+void receiveEvent2(size_t count)  // Handle Wire2 Slave Rx Event (incoming I2C request/data)
 {
-    for(size_t idx=0; idx < count; idx++)
-    {
-        if(idx < MEM_LEN)                     // drop data beyond mem boundary
-            mem2[idx] = Wire2.readByte();     // copy data to mem
-        else
-            Wire2.readByte();                 // drop data if mem full
-    }
+    Wire2.read(mem2, count);      // copy Rx data to databuf
 }
-void requestEvent2(void)                      // Handle Wire2 Tx Event (outgoing I2C data)
+void requestEvent2(void)          // Handle Wire2 Tx Event (outgoing I2C data)
 {
-    Wire2.write(mem2, MEM_LEN);               // fill Tx buffer (send full mem)
+    Wire2.write(mem2, MEM_LEN);   // fill Tx buffer (send full mem)
 }
 #endif
 
 #if I2C_BUS_NUM >= 4
-void receiveEvent3(size_t count)              // Handle Wire3 Slave Rx Event (incoming I2C request/data)
+void receiveEvent3(size_t count)  // Handle Wire3 Slave Rx Event (incoming I2C request/data)
 {
-    for(size_t idx=0; idx < count; idx++)
-    {
-        if(idx < MEM_LEN)                     // drop data beyond mem boundary
-            mem3[idx] = Wire3.readByte();     // copy data to mem
-        else
-            Wire3.readByte();                 // drop data if mem full
-    }
+    Wire3.read(mem3, count);      // copy Rx data to databuf
 }
-void requestEvent3(void)                      // Handle Wire3 Tx Event (outgoing I2C data)
+void requestEvent3(void)          // Handle Wire3 Tx Event (outgoing I2C data)
 {
-    Wire3.write(mem3, MEM_LEN);               // fill Tx buffer (send full mem)
+    Wire3.write(mem3, MEM_LEN);   // fill Tx buffer (send full mem)
 }
 #endif
 
