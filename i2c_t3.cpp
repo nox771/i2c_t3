@@ -163,6 +163,8 @@ void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t a
         *(i2c->C1) = I2C_C1_IICEN; // Master - enable I2C (hold in Rx mode, intr disabled)
     else
         *(i2c->C1) = I2C_C1_IICEN|I2C_C1_IICIE; // Slave - enable I2C and interrupts
+
+    i2c->resetBusCount = 0;   // bboyes
 }
 
 
@@ -686,6 +688,7 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
             if(!(*(i2c->C1) & I2C_C1_MST))
             {
                 resetBus_(i2c,bus);
+                if ((i2c->resetBusCount) < UINT32_MAX) i2c->resetBusCount++;   // bboyes max test added 2017Jun20
                 if(!(*(i2c->S) & I2C_S_BUSY))
                 {
                     // become the bus master in transmit mode (send start)

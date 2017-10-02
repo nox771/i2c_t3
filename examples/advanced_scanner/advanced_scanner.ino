@@ -51,7 +51,7 @@ void setup()
 
     // Setup for Master mode, all buses, external pullups, 400kHz, 10ms default timeout
     //
-    Wire.begin(I2C_MASTER, 0x00, WIRE_PINS, I2C_PULLUP_EXT, 400000);
+    Wire.begin(I2C_MASTER, 0x00, WIRE_PINS, I2C_PULLUP_EXT, 100000);
     Wire.setDefaultTimeout(10000); // 10ms
     #if I2C_BUS_NUM >= 2
     Wire1.begin(I2C_MASTER, 0x00, WIRE1_PINS, I2C_PULLUP_EXT, 400000);
