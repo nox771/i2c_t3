@@ -223,34 +223,73 @@ enum i2c_dma_state {I2C_DMA_OFF,
                     I2C_DMA_BULK,
                     I2C_DMA_LAST};
 #if defined(__MKL26Z64__) // LC
-    enum i2c_pins {I2C_PINS_16_17,          // 16 SCL0  17 SDA0
+    enum i2c_pins {I2C_PINS_16_17 = 0,      // 16 SCL0  17 SDA0
                    I2C_PINS_18_19,          // 19 SCL0  18 SDA0
-                   I2C_PINS_22_23};         // 22 SCL1  23 SDA1
+                   I2C_PINS_22_23,          // 22 SCL1  23 SDA1
+                   I2C_PINS_DEFAULT,
+                   I2C_PINS_COUNT};
+    const uint8_t i2c_valid_pins[] = { 0, 16, 17, 2,  // bus, scl, sda, alt
+                                       0, 19, 18, 2,
+                                       1, 22, 23, 2,
+                                       0,  0,  0, 0 };
 #elif defined(__MK20DX128__) // 3.0
-    enum i2c_pins {I2C_PINS_16_17,          // 16 SCL0  17 SDA0
-                   I2C_PINS_18_19};         // 19 SCL0  18 SDA0
+    enum i2c_pins {I2C_PINS_16_17 = 0,      // 16 SCL0  17 SDA0
+                   I2C_PINS_18_19,          // 19 SCL0  18 SDA0
+                   I2C_PINS_DEFAULT,
+                   I2C_PINS_COUNT};
+    const uint8_t i2c_valid_pins[] = { 0, 16, 17, 2,  // bus, scl, sda, alt
+                                       0, 19, 18, 2,
+                                       0,  0,  0, 0 };
 #elif defined(__MK20DX256__) // 3.1/3.2
-    enum i2c_pins {I2C_PINS_16_17,          // 16 SCL0  17 SDA0
+    enum i2c_pins {I2C_PINS_16_17 = 0,      // 16 SCL0  17 SDA0
                    I2C_PINS_18_19,          // 19 SCL0  18 SDA0
                    I2C_PINS_29_30,          // 29 SCL1  30 SDA1
-                   I2C_PINS_26_31};         // 26 SCL1  31 SDA1
+                   I2C_PINS_26_31,          // 26 SCL1  31 SDA1
+                   I2C_PINS_DEFAULT,
+                   I2C_PINS_COUNT};
+    const uint8_t i2c_valid_pins[] = { 0, 16, 17, 2,  // bus, scl, sda, alt
+                                       0, 19, 18, 2,
+                                       1, 29, 30, 2,
+                                       1, 26, 31, 6,
+                                       0,  0,  0, 0 };
 #elif defined(__MK64FX512__) // 3.5
-    enum i2c_pins {I2C_PINS_3_4,            //  3 SCL2   4 SDA2
-                   I2C_PINS_7_8,            //  7 SCL0   8 SDA0
-                   I2C_PINS_16_17,          // 16 SCL0  17 SDA0
-                   I2C_PINS_18_19,          // 19 SCL0  18 SDA0
-                   I2C_PINS_33_34,          // 33 SCL0  34 SDA0
-                   I2C_PINS_37_38,          // 37 SCL1  38 SDA1
-                   I2C_PINS_47_48};         // 47 SCL0  48 SDA0
-#elif defined(__MK66FX1M0__) // 3.6
-    enum i2c_pins {I2C_PINS_3_4,            //  3 SCL2   4 SDA2
+    enum i2c_pins {I2C_PINS_3_4 = 0,        //  3 SCL2   4 SDA2
                    I2C_PINS_7_8,            //  7 SCL0   8 SDA0
                    I2C_PINS_16_17,          // 16 SCL0  17 SDA0
                    I2C_PINS_18_19,          // 19 SCL0  18 SDA0
                    I2C_PINS_33_34,          // 33 SCL0  34 SDA0
                    I2C_PINS_37_38,          // 37 SCL1  38 SDA1
                    I2C_PINS_47_48,          // 47 SCL0  48 SDA0
-                   I2C_PINS_56_57};         // 57 SCL3  56 SDA3
+                   I2C_PINS_DEFAULT,
+                   I2C_PINS_COUNT};
+    const uint8_t i2c_valid_pins[] = { 2,  3,  4, 5,  // bus, scl, sda, alt
+                                       0,  7,  8, 7,
+                                       0, 16, 17, 2,
+                                       0, 19, 18, 2,
+                                       0, 33, 34, 5,
+                                       1, 37, 38, 2,
+                                       0, 47, 48, 2,
+                                       0,  0,  0, 0 };
+#elif defined(__MK66FX1M0__) // 3.6
+    enum i2c_pins {I2C_PINS_3_4 = 0,        //  3 SCL2   4 SDA2
+                   I2C_PINS_7_8,            //  7 SCL0   8 SDA0
+                   I2C_PINS_16_17,          // 16 SCL0  17 SDA0
+                   I2C_PINS_18_19,          // 19 SCL0  18 SDA0
+                   I2C_PINS_33_34,          // 33 SCL0  34 SDA0
+                   I2C_PINS_37_38,          // 37 SCL1  38 SDA1
+                   I2C_PINS_47_48,          // 47 SCL0  48 SDA0
+                   I2C_PINS_56_57,          // 57 SCL3  56 SDA3
+                   I2C_PINS_DEFAULT,
+                   I2C_PINS_COUNT};
+    const uint8_t i2c_valid_pins[] = { 2,  3,  4, 5,  // bus, scl, sda, alt
+                                       0,  7,  8, 7,
+                                       0, 16, 17, 2,
+                                       0, 19, 18, 2,
+                                       0, 33, 34, 5,
+                                       1, 37, 38, 2,
+                                       0, 47, 48, 2,
+                                       3, 57, 56, 2,
+                                       0,  0,  0, 0 };
 #endif
 
 
@@ -305,7 +344,8 @@ struct i2cStruct
     volatile size_t   txBufferLength;        // Tx Length                         (User&ISR)
     i2c_op_mode opMode;                      // Operating Mode                    (User)
     i2c_mode currentMode;                    // Current Mode                      (User)
-    i2c_pins currentPins;                    // Current Pins                      (User)
+    volatile uint8_t  currentSCL;            // Current SCL pin                   (User&ISR)
+    volatile uint8_t  currentSDA;            // Current SDA pin                   (User&ISR)
     i2c_pullup currentPullup;                // Current Pullup                    (User)
     uint32_t currentRate;                    // Current Rate                      (User)
     i2c_stop currentStop;                    // Current Stop                      (User)
@@ -386,14 +426,26 @@ public:
     ~i2c_t3();
 
     // ------------------------------------------------------------------------------------------------------
+    // Pin Mapping - convert i2c_pins enum into pin values, intended for internal use only
+    //
+    inline uint8_t mapSCL(i2c_pins pins) { return i2c_valid_pins[pins*3+1]; }
+    inline uint8_t mapSDA(i2c_pins pins) { return i2c_valid_pins[pins*3+2]; }
+
+    // ------------------------------------------------------------------------------------------------------
+    // Valid pin checks - verify if SCL or SDA pin is valid, intended for internal use only
+    // return: alt setting, 0=not valid
+    // parameters:
+    //      bus = bus number
+    //      pin = pin number to check
+    //      offset = array offset
+    //
+    static uint8_t validPin_(uint8_t bus, uint8_t pin, uint8_t offset);
+
+    // ------------------------------------------------------------------------------------------------------
     // Initialize I2C (base routine)
     //
     static void begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t address1, uint8_t address2,
-                       i2c_pins pins, i2c_pullup pullup, uint32_t rate, i2c_op_mode opMode);
-    //
-    // Return default pins
-    //
-    static i2c_pins getDefaultPins_(uint8_t bus);
+                       uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, uint32_t rate, i2c_op_mode opMode);
     //
     // Initialize I2C (Master) - initializes I2C as Master mode, external pullups, 100kHz rate,
     //                           and default pin setting
@@ -406,7 +458,7 @@ public:
     // parameters: none
     //
     inline void begin(void)
-        { begin_(i2c, bus, I2C_MASTER, 0, 0, getDefaultPins_(bus), I2C_PULLUP_EXT, 100000, I2C_OP_MODE_ISR); }
+        { begin_(i2c, bus, I2C_MASTER, 0, 0, 0, 0, I2C_PULLUP_EXT, 100000, I2C_OP_MODE_ISR); }
     //
     // Initialize I2C (Slave) - initializes I2C as Slave mode using address, external pullups, 100kHz rate,
     //                          and default pin setting
@@ -420,16 +472,18 @@ public:
     //      address = 7bit slave address of device
     //
     inline void begin(int address)
-        { begin_(i2c, bus, I2C_SLAVE, (uint8_t)address, 0, getDefaultPins_(bus), I2C_PULLUP_EXT, 100000, I2C_OP_MODE_ISR); }
+        { begin_(i2c, bus, I2C_SLAVE, (uint8_t)address, 0, 0, 0, I2C_PULLUP_EXT, 100000, I2C_OP_MODE_ISR); }
     inline void begin(uint8_t address)
-        { begin_(i2c, bus, I2C_SLAVE, address, 0, getDefaultPins_(bus), I2C_PULLUP_EXT, 100000, I2C_OP_MODE_ISR); }
+        { begin_(i2c, bus, I2C_SLAVE, address, 0, 0, 0, I2C_PULLUP_EXT, 100000, I2C_OP_MODE_ISR); }
     //
     // Initialize I2C - initializes I2C as Master or single address Slave
     // return: none
-    // parameters:
+    // parameters (optional parameters marked '^'):
     //      mode = I2C_MASTER, I2C_SLAVE
-    //      address = 7bit slave address when configured as Slave (ignored for Master mode)
-    //      pins = pins to use, options are:
+    //      address1 = 7bit slave address when configured as Slave (ignored for Master mode)
+    //    ^ address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
+    //    ^ pins = pins to use, can be specified as 'i2c_pins' enum,
+    //             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
     //          Interface  Devices     Pin Name      SCL    SDA
     //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
     //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
@@ -443,49 +497,30 @@ public:
     //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38
     //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4
     //            Wire3      3.6    I2C_PINS_56_57    57     56  *
-    //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
-    //      rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
+    //    ^ pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
+    //    ^ rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
     //             following enum values (deprecated):
     //             I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400,
     //             I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200,
     //             I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400,
     //             I2C_RATE_2800, I2C_RATE_3000
-    //      opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
+    //    ^ opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
     //
-    inline void begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, uint32_t rate, i2c_op_mode opMode=I2C_OP_MODE_ISR)
-        { begin_(i2c, bus, mode, address, 0, pins, pullup, rate, opMode); }
-    //
-    // Initialize I2C - initializes I2C as Master or address range Slave
-    // return: none
-    // parameters:
-    //      mode = I2C_MASTER, I2C_SLAVE
-    //      address1 = 1st 7bit address for specifying Slave address range (ignored for Master mode)
-    //      address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
-    //      pins = pins to use, options are:
-    //          Interface  Devices     Pin Name      SCL    SDA
-    //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
-    //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
-    //             Wire      All    I2C_PINS_18_19    19     18  *
-    //             Wire    3.5/3.6  I2C_PINS_7_8       7      8
-    //             Wire    3.5/3.6  I2C_PINS_33_34    33     34
-    //             Wire    3.5/3.6  I2C_PINS_47_48    47     48
-    //            Wire1       LC    I2C_PINS_22_23    22     23
-    //            Wire1    3.1/3.2  I2C_PINS_26_31    26     31
-    //            Wire1    3.1/3.2  I2C_PINS_29_30    29     30
-    //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38
-    //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4
-    //            Wire3      3.6    I2C_PINS_56_57    57     56  *
-    //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
-    //      rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
-    //             following enum values (deprecated):
-    //             I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400,
-    //             I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200,
-    //             I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400,
-    //             I2C_RATE_2800, I2C_RATE_3000
-    //      opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
-    //
-    inline void begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup, uint32_t rate, i2c_op_mode opMode=I2C_OP_MODE_ISR)
-        { begin_(i2c, bus, mode, address1, address2, pins, pullup, rate, opMode); }
+    inline void begin(i2c_mode mode, uint8_t address1, i2c_pins pins=I2C_PINS_DEFAULT,
+                      i2c_pullup pullup=I2C_PULLUP_EXT, uint32_t rate=400000, i2c_op_mode opMode=I2C_OP_MODE_ISR)
+        { begin_(i2c, bus, mode, address1, 0, mapSCL(pins), mapSDA(pins), pullup, rate, opMode); }
+
+    inline void begin(i2c_mode mode, uint8_t address1, uint8_t pinSCL, uint8_t pinSDA,
+                      i2c_pullup pullup=I2C_PULLUP_EXT, uint32_t rate=400000, i2c_op_mode opMode=I2C_OP_MODE_ISR)
+        { begin_(i2c, bus, mode, address1, 0, pinSCL, pinSDA, pullup, rate, opMode); }
+
+    inline void begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins=I2C_PINS_DEFAULT,
+                      i2c_pullup pullup=I2C_PULLUP_EXT, uint32_t rate=400000, i2c_op_mode opMode=I2C_OP_MODE_ISR)
+        { begin_(i2c, bus, mode, address1, address2, mapSCL(pins), mapSDA(pins), pullup, rate, opMode); }
+
+    inline void begin(i2c_mode mode, uint8_t address1, uint8_t address2, uint8_t pinSCL, uint8_t pinSDA,
+                      i2c_pullup pullup=I2C_PULLUP_EXT, uint32_t rate=400000, i2c_op_mode opMode=I2C_OP_MODE_ISR)
+        { begin_(i2c, bus, mode, address1, address2, pinSCL, pinSDA, pullup, rate, opMode); }
 
     // ------------------------------------------------------------------------------------------------------
     // Set Operating Mode (base routine)
@@ -569,14 +604,15 @@ public:
     // ------------------------------------------------------------------------------------------------------
     // Configure I2C pins (base routine)
     //
-    static uint8_t pinConfigure_(struct i2cStruct* i2c, uint8_t bus, i2c_pins pins, i2c_pullup pullup, uint8_t reconfig=1);
+    static uint8_t pinConfigure_(struct i2cStruct* i2c, uint8_t bus, uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, uint8_t reconfig=1);
     //
     // ------------------------------------------------------------------------------------------------------
     // Configure I2C pins - reconfigures active I2C pins on-the-fly (only works when bus is idle).  If reconfig
     //                      set then inactive pins will switch to input mode using same pullup configuration.
     // return: 1=success, 0=fail (bus busy or incompatible pins)
     // parameters:
-    //      pins = pins to use, options are:
+    //      pins = pins to use, can be specified as 'i2c_pins' enum,
+    //             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
     //          Interface  Devices     Pin Name      SCL    SDA
     //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
     //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
@@ -593,7 +629,25 @@ public:
     //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
     //      reconfig = 1=reconfigure old pins, 0=do not reconfigure old pins (base routine only)
     //
-    inline uint8_t pinConfigure(i2c_pins pins, i2c_pullup pullup) { return pinConfigure_(i2c, bus, pins, pullup, 1); }
+    inline uint8_t pinConfigure(i2c_pins pins, i2c_pullup pullup=I2C_PULLUP_EXT)
+        { return pinConfigure_(i2c, bus, mapSCL(pins), mapSDA(pins), pullup, 1); }
+    inline uint8_t pinConfigure(uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup=I2C_PULLUP_EXT)
+        { return pinConfigure_(i2c, bus, pinSCL, pinSDA, pullup, 1); }
+    //
+    // ------------------------------------------------------------------------------------------------------
+    // Set SCL/SDA - change the SCL or SDA pin
+    // return: none
+    // parameters:
+    //      pin = pin to use, if invalid then no change will occur
+    inline void setSCL(uint8_t pin) { pinConfigure_(i2c, bus, pin, i2c->currentSDA, i2c->currentPullup, 1); }
+    inline void setSDA(uint8_t pin) { pinConfigure_(i2c, bus, i2c->currentSCL, pin, i2c->currentPullup, 1); }
+    //
+    // ------------------------------------------------------------------------------------------------------
+    // Get SCL/SDA - get the current SCL or SDA pin
+    // return: pin used
+    // parameters: none
+    inline uint8_t getSCL(void) { return i2c->currentSCL; }
+    inline uint8_t getSDA(void) { return i2c->currentSDA; }
 
     // ------------------------------------------------------------------------------------------------------
     // Set Default Timeout - sets the default timeout to be applied to all functions called with a timeout of

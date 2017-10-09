@@ -32,25 +32,25 @@
 // ------------------------------------------------------------------------------------------------------
 // Static inits
 //
-#define I2C_STRUCT(a1,f,c1,s,d,c2,flt,ra,smb,a2,slth,sltl,pins) \
-    {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, pins, \
+#define I2C_STRUCT(a1,f,c1,s,d,c2,flt,ra,smb,a2,slth,sltl,scl,sda) \
+    {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, scl, sda, \
      I2C_PULLUP_EXT, 100000, I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, 0}
 
 struct i2cStruct i2c_t3::i2cData[] =
 {
-    I2C_STRUCT(&I2C0_A1, &I2C0_F, &I2C0_C1, &I2C0_S, &I2C0_D, &I2C0_C2, &I2C0_FLT, &I2C0_RA, &I2C0_SMB, &I2C0_A2, &I2C0_SLTH, &I2C0_SLTL, I2C_PINS_18_19)
+    I2C_STRUCT(&I2C0_A1, &I2C0_F, &I2C0_C1, &I2C0_S, &I2C0_D, &I2C0_C2, &I2C0_FLT, &I2C0_RA, &I2C0_SMB, &I2C0_A2, &I2C0_SLTH, &I2C0_SLTL, 19, 18)
 #if (I2C_BUS_NUM >= 2) && defined(__MK20DX256__) // 3.1/3.2
-   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, I2C_PINS_29_30)
+   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, 29, 30)
 #elif (I2C_BUS_NUM >= 2) && defined(__MKL26Z64__) // LC
-   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, I2C_PINS_22_23)
+   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, 22, 23)
 #elif (I2C_BUS_NUM >= 2) && (defined(__MK64FX512__) || defined(__MK66FX1M0__))  // 3.5/3.6
-   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, I2C_PINS_37_38)
+   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, 37, 38)
 #endif
 #if (I2C_BUS_NUM >= 3) && (defined(__MK64FX512__) || defined(__MK66FX1M0__))  // 3.5/3.6
-   ,I2C_STRUCT(&I2C2_A1, &I2C2_F, &I2C2_C1, &I2C2_S, &I2C2_D, &I2C2_C2, &I2C2_FLT, &I2C2_RA, &I2C2_SMB, &I2C2_A2, &I2C2_SLTH, &I2C2_SLTL, I2C_PINS_3_4)
+   ,I2C_STRUCT(&I2C2_A1, &I2C2_F, &I2C2_C1, &I2C2_S, &I2C2_D, &I2C2_C2, &I2C2_FLT, &I2C2_RA, &I2C2_SMB, &I2C2_A2, &I2C2_SLTH, &I2C2_SLTL, 3, 4)
 #endif
 #if (I2C_BUS_NUM >= 4) && defined(__MK66FX1M0__) // 3.6
-   ,I2C_STRUCT(&I2C3_A1, &I2C3_F, &I2C3_C1, &I2C3_S, &I2C3_D, &I2C3_C2, &I2C3_FLT, &I2C3_RA, &I2C3_SMB, &I2C3_A2, &I2C3_SLTH, &I2C3_SLTL, I2C_PINS_56_57)
+   ,I2C_STRUCT(&I2C3_A1, &I2C3_F, &I2C3_C1, &I2C3_S, &I2C3_D, &I2C3_C2, &I2C3_FLT, &I2C3_RA, &I2C3_SMB, &I2C3_A2, &I2C3_SLTH, &I2C3_SLTL, 57, 56)
 #endif
 };
 
@@ -74,11 +74,12 @@ i2c_t3::~i2c_t3()
 // ------------------------------------------------------------------------------------------------------
 // Initialize I2C - initializes I2C as Master or address range Slave
 // return: none
-// parameters:
+// parameters (optional parameters marked '^'):
 //      mode = I2C_MASTER, I2C_SLAVE
-//      address1 = 1st 7bit address for specifying Slave address range (ignored for Master mode)
-//      address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
-//      pins = pins to use, options are:
+//      address1 = 7bit slave address when configured as Slave (ignored for Master mode)
+//    ^ address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
+//    ^ pins = pins to use, can be specified as 'i2c_pins' enum,
+//             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
 //          Interface  Devices     Pin Name      SCL    SDA
 //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
 //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
@@ -92,17 +93,17 @@ i2c_t3::~i2c_t3()
 //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38
 //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4
 //            Wire3      3.6    I2C_PINS_56_57    57     56  *
-//      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
-//      rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
+//    ^ pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
+//    ^ rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
 //             following enum values (deprecated):
 //             I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400,
 //             I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200,
 //             I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400,
 //             I2C_RATE_2800, I2C_RATE_3000
-//      opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
+//    ^ opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
 //
 void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t address1, uint8_t address2,
-                    i2c_pins pins, i2c_pullup pullup, uint32_t rate, i2c_op_mode opMode)
+                    uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, uint32_t rate, i2c_op_mode opMode)
 {
     // Enable I2C internal clock
     if(bus == 0)
@@ -123,12 +124,12 @@ void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t a
     i2c->currentMode = mode; // Set mode
     i2c->currentStatus = I2C_WAITING; // reset status
 
-    // Set Master/Slave address (zeroed in Master to prevent accidental Rx when setup is changed dynamically)
+    // Set Master/Slave address
     if(i2c->currentMode == I2C_MASTER)
     {
         *(i2c->C2) = I2C_C2_HDRS; // Set high drive select
-        *(i2c->A1) = 0;
-        *(i2c->RA) = 0;
+        //*(i2c->A1) = 0;
+        //*(i2c->RA) = 0;
     }
     else
     {
@@ -142,10 +143,12 @@ void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t a
     }
 
     // Setup pins and options (note: does not "unset" unused pins if changed).  As noted in
-    // original TwoWire.cpp, internal 3.0/3.1 pullup is strong (about 190 ohms), but it can
+    // original TwoWire.cpp, internal 3.0/3.1/3.2 pullup is strong (about 190 ohms), but it can
     // work if other devices on bus have strong enough pulldown devices (usually true).
     //
-    pinConfigure_(i2c, bus, pins, pullup, 0);
+    if(!pinSCL) pinSCL = i2c->currentSCL; // if either pin specified as 0, then use current settings
+    if(!pinSDA) pinSDA = i2c->currentSDA;
+    pinConfigure_(i2c, bus, pinSCL, pinSDA, pullup, 0);
 
     // Set I2C rate
     #if defined(__MKL26Z64__) // LC
@@ -166,34 +169,19 @@ void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t a
 }
 
 
-// Get Default Pins - this obtains the default pins to use when using simplified begin() calls,
-//                    intended for internal use only
-// return: i2c_pins - default pin setting:
-//                    Wire:  I2C_PINS_18_19
-//                    Wire1: I2C_PINS_29_30 (3.1/3.2), I2C_PINS_22_23 (LC), I2C_PINS_37_38 (3.5/3.6)
-//                    Wire2: I2C_PINS_3_4   (3.5/3.6)
-//                    Wire3: I2C_PINS_56_57 (3.6)
+// ------------------------------------------------------------------------------------------------------
+// Valid pin checks - verify if SCL or SDA pin is valid on given bus, intended for internal use only
+// return: alt setting, 0=not valid
+// parameters:
+//      bus = bus number
+//      pin = pin number to check
+//      offset = array offset
 //
-i2c_pins i2c_t3::getDefaultPins_(uint8_t bus)
+uint8_t i2c_t3::validPin_(uint8_t bus, uint8_t pin, uint8_t offset)
 {
-    i2c_pins defpins = I2C_PINS_18_19;
-    #if defined(__MKL26Z64__)
-        defpins = (bus == 1) ? I2C_PINS_22_23 : I2C_PINS_18_19; // LC
-    #elif defined(__MK20DX128__)
-        defpins = I2C_PINS_18_19; // 3.0
-    #elif defined(__MK20DX256__)
-        defpins = (bus == 1) ? I2C_PINS_29_30 : I2C_PINS_18_19; // 3.1/3.2
-    #elif defined(__MK64FX512__)
-        defpins = (bus == 2) ? I2C_PINS_3_4   :
-                  (bus == 1) ? I2C_PINS_37_38 :
-                               I2C_PINS_18_19; // 3.5
-    #elif defined(__MK66FX1M0__)
-        defpins = (bus == 3) ? I2C_PINS_56_57 :
-                  (bus == 2) ? I2C_PINS_3_4   :
-                  (bus == 1) ? I2C_PINS_37_38 :
-                               I2C_PINS_18_19; // 3.6
-    #endif
-    return defpins;
+    for(uint8_t idx=0; idx < I2C_PINS_COUNT-1; idx++)
+        if(i2c_valid_pins[idx*4] == bus && i2c_valid_pins[idx*4+offset] == pin) return i2c_valid_pins[idx*4+3];
+    return 0;
 }
 
 
@@ -375,7 +363,8 @@ void i2c_t3::setRate_(struct i2cStruct* i2c, uint32_t busFreq, uint32_t i2cFreq)
 //                      set then inactive pins will switch to input mode using same pullup configuration.
 // return: 1=success, 0=fail (bus busy or incompatible pins)
 // parameters:
-//      pins = pins to use, options are:
+//      pins = pins to use, can be specified as 'i2c_pins' enum,
+//             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
 //          Interface  Devices     Pin Name      SCL    SDA
 //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
 //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
@@ -395,248 +384,43 @@ void i2c_t3::setRate_(struct i2cStruct* i2c, uint32_t busFreq, uint32_t i2cFreq)
 #define PIN_CONFIG_ALT(name,alt) uint32_t name = (pullup == I2C_PULLUP_EXT) ? (PORT_PCR_MUX(alt)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE) \
                                                                             : (PORT_PCR_MUX(alt)|PORT_PCR_PE|PORT_PCR_PS)
 
-uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, i2c_pins pins, i2c_pullup pullup, uint8_t reconfig)
+uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, uint8_t reconfig)
 {
-    uint8_t retval = 0;
+    uint8_t validAlt, retval=0;
+    volatile uint32_t* pcr;
 
-    if(reconfig && (*(i2c->S) & I2C_S_BUSY)) return 0; // if reconfig return immediately if bus busy (otherwise assume initial setup)
+    if(reconfig && (*(i2c->S) & I2C_S_BUSY)) return 0; // if reconfig return immediately if bus busy (reconfig=0 for init)
 
-    // Create config settings
+    // Verify new SCL pin is different and valid, or reconfig=0 (re-init)
     //
-    PIN_CONFIG_ALT(pinConfigAlt2,2);
-    #if defined(__MK20DX256__) // 3.1/3.2
-        PIN_CONFIG_ALT(pinConfigAlt6,6);
-    #endif
-    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-        PIN_CONFIG_ALT(pinConfigAlt5,5);
-        PIN_CONFIG_ALT(pinConfigAlt7,7);
-    #endif
-
-    // Verify new pin setting is valid
-    //
-    if(bus == 0)
+    validAlt = validPin_(bus, pinSCL, 1);
+    if((pinSCL != i2c->currentSCL && validAlt) || !reconfig)
     {
-        switch(pins)
-        {
-        case I2C_PINS_16_17: retval = 1; break;
-        case I2C_PINS_18_19: retval = 1; break;
-        #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-        case I2C_PINS_7_8:   retval = 1; break;
-        case I2C_PINS_33_34: retval = 1; break;
-        case I2C_PINS_47_48: retval = 1; break;
-        #endif
-        default: break;
-        }
-    }
-    #if I2C_BUS_NUM >= 2
-        if(bus == 1)
-        {
-            switch(pins)
-            {
-            #if defined(__MKL26Z64__) // LC
-            case I2C_PINS_22_23: retval = 1; break;
-            #endif
-            #if defined(__MK20DX256__) // 3.1/3.2
-            case I2C_PINS_26_31: retval = 1; break;
-            case I2C_PINS_29_30: retval = 1; break;
-            #endif
-            #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-            case I2C_PINS_37_38: retval = 1; break;
-            #endif
-            default: break;
-            }
-        }
-    #endif
-    #if I2C_BUS_NUM >= 3
-        if(bus == 2)
-        {
-            switch(pins)
-            {
-            #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-            case I2C_PINS_3_4: retval = 1; break;
-            #endif
-            default: break;
-            }
-        }
-    #endif
-    #if I2C_BUS_NUM >= 4
-        if(bus == 3)
-        {
-            switch(pins)
-            {
-            #if defined(__MK66FX1M0__) // 3.6
-            case I2C_PINS_56_57: retval = 1; break;
-            #endif
-            default: break;
-            }
-        }
-    #endif
-
-    // If compatible pin setting found then reconfig (break-before-make) and update.
-    //
-    // If pins are given an impossible value (eg. I2C0 with I2C_PINS_26_31) then the function will return fail,
-    // and there will be no change to the configuration.
-    //
-    if(retval)
-    {
-        // If reconfig set, switch previous pins to non-I2C
-        if(reconfig)
-        {
-            uint8_t old_mode = (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP;
-            switch(i2c->currentPins)
-            {
-            case I2C_PINS_16_17:
-                pinMode(17,old_mode);
-                pinMode(16,old_mode);
-                break;
-            case I2C_PINS_18_19:
-                pinMode(18,old_mode);
-                pinMode(19,old_mode);
-                break;
-            #if defined(__MKL26Z64__) // LC
-            case I2C_PINS_22_23:
-                pinMode(23,old_mode);
-                pinMode(22,old_mode);
-                break;
-            #endif
-            #if defined(__MK20DX256__) // 3.1/3.2
-            case I2C_PINS_29_30:
-                pinMode(30,old_mode);
-                pinMode(29,old_mode);
-                break;
-            case I2C_PINS_26_31:
-                pinMode(31,old_mode);
-                pinMode(26,old_mode);
-                break;
-            #endif
-            #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-            case I2C_PINS_3_4:
-                pinMode(4,old_mode);
-                pinMode(3,old_mode);
-                break;
-            case I2C_PINS_7_8:
-                pinMode(8,old_mode);
-                pinMode(7,old_mode);
-                break;
-            case I2C_PINS_33_34:
-                pinMode(34,old_mode);
-                pinMode(33,old_mode);
-                break;
-            case I2C_PINS_37_38:
-                pinMode(38,old_mode);
-                pinMode(37,old_mode);
-                break;
-            case I2C_PINS_47_48:
-                pinMode(48,old_mode);
-                pinMode(47,old_mode);
-                break;
-            #endif
-            #if defined(__MK66FX1M0__) // 3.6
-            case I2C_PINS_56_57:
-                pinMode(56,old_mode);
-                pinMode(57,old_mode);
-                break;
-            #endif
-            default: break;
-            }
-        }
-
-        // Configure new pins
-        //
-        if(bus == 0)
-        {
-            switch(pins)
-            {
-            case I2C_PINS_16_17:
-                CORE_PIN17_CONFIG = pinConfigAlt2;
-                CORE_PIN16_CONFIG = pinConfigAlt2;
-                break;
-            case I2C_PINS_18_19:
-                CORE_PIN18_CONFIG = pinConfigAlt2;
-                CORE_PIN19_CONFIG = pinConfigAlt2;
-                break;
-            #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-            case I2C_PINS_7_8:
-                CORE_PIN8_CONFIG = pinConfigAlt7;
-                CORE_PIN7_CONFIG = pinConfigAlt7;
-                break;
-            case I2C_PINS_33_34:
-                CORE_PIN34_CONFIG = pinConfigAlt5;
-                CORE_PIN33_CONFIG = pinConfigAlt5;
-                break;
-            case I2C_PINS_47_48:
-                CORE_PIN48_CONFIG = pinConfigAlt2;
-                CORE_PIN47_CONFIG = pinConfigAlt2;
-                break;
-            #endif
-            default: break;
-            }
-        }
-        #if I2C_BUS_NUM >= 2
-            if(bus == 1)
-            {
-                switch(pins)
-                {
-                #if defined(__MKL26Z64__) // LC
-                case I2C_PINS_22_23:
-                    CORE_PIN23_CONFIG = pinConfigAlt2;
-                    CORE_PIN22_CONFIG = pinConfigAlt2;
-                    break;
-                #endif
-                #if defined(__MK20DX256__) // 3.1/3.2
-                case I2C_PINS_26_31:
-                    CORE_PIN31_CONFIG = pinConfigAlt6;
-                    CORE_PIN26_CONFIG = pinConfigAlt6;
-                    break;
-                case I2C_PINS_29_30:
-                    CORE_PIN30_CONFIG = pinConfigAlt2;
-                    CORE_PIN29_CONFIG = pinConfigAlt2;
-                    break;
-                #endif
-                #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-                case I2C_PINS_37_38:
-                    CORE_PIN38_CONFIG = pinConfigAlt2;
-                    CORE_PIN37_CONFIG = pinConfigAlt2;
-                    break;
-                #endif
-                default: break;
-                }
-            }
-        #endif
-        #if I2C_BUS_NUM >= 3
-            if(bus == 2)
-            {
-                switch(pins)
-                {
-                #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-                case I2C_PINS_3_4:
-                    CORE_PIN4_CONFIG = pinConfigAlt5;
-                    CORE_PIN3_CONFIG = pinConfigAlt5;
-                    break;
-                #endif
-                default: break;
-                }
-            }
-        #endif
-        #if I2C_BUS_NUM >= 4
-            if(bus == 3)
-            {
-                switch(pins)
-                {
-                #if defined(__MK66FX1M0__) // 3.6
-                case I2C_PINS_56_57:
-                    CORE_PIN56_CONFIG = pinConfigAlt2;
-                    CORE_PIN57_CONFIG = pinConfigAlt2;
-                    break;
-                #endif
-                default: break;
-                }
-            }
-        #endif
-
-        // Update settings
-        i2c->currentPins = pins;
+        // If reconfig set, switch previous pin to non-I2C input
+        if(reconfig) pinMode(i2c->currentSCL, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
+        // Config new pin
+        PIN_CONFIG_ALT(configSCL, validAlt);
+        pcr = portConfigRegister(pinSCL);
+        *pcr = configSCL;
+        i2c->currentSCL = pinSCL;
         i2c->currentPullup = pullup;
+        retval = 1;
+    }
+
+    // Verify new SDA pin is different and valid (not necessarily same Alt as SCL), or reconfig=0 (re-init)
+    //
+    validAlt = validPin_(bus, pinSDA, 2);
+    if((pinSDA != i2c->currentSDA && validAlt) || !reconfig)
+    {
+        // If reconfig set, switch previous pin to non-I2C input
+        if(reconfig) pinMode(i2c->currentSDA, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
+        // Config new pin
+        PIN_CONFIG_ALT(configSDA, validAlt);
+        pcr = portConfigRegister(pinSDA);
+        *pcr = configSDA;
+        i2c->currentSDA = pinSDA;
+        i2c->currentPullup = pullup;
+        retval = 1;
     }
 
     return retval;
@@ -756,60 +540,34 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
 //
 void i2c_t3::resetBus_(struct i2cStruct* i2c, uint8_t bus)
 {
-    uint8_t scl=0, sda=0, count=0;
+    uint8_t scl = i2c->currentSCL;
+    uint8_t sda = i2c->currentSDA;
 
-    switch(i2c->currentPins)
+    // change pin mux to digital I/O
+    pinMode(sda,((i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP));
+    digitalWrite(scl,HIGH);
+    pinMode(scl,OUTPUT);
+
+    for(uint8_t count=0; digitalRead(sda) == 0 && count < 9; count++)
     {
-    case I2C_PINS_16_17: sda = 17; scl = 16; break;
-    case I2C_PINS_18_19: sda = 18; scl = 19; break;
-    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-    case I2C_PINS_7_8:   sda =  8; scl =  7; break;
-    case I2C_PINS_33_34: sda = 34; scl = 33; break;
-    case I2C_PINS_47_48: sda = 48; scl = 47; break;
-    #endif
-    #if defined(__MKL26Z64__) // LC
-    case I2C_PINS_22_23: sda = 23; scl = 22; break;
-    #endif
-    #if defined(__MK20DX256__) // 3.1/3.2
-    case I2C_PINS_29_30: sda = 30; scl = 29; break;
-    case I2C_PINS_26_31: sda = 31; scl = 26; break;
-    #endif
-    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-    case I2C_PINS_37_38: sda = 38; scl = 37; break;
-    case I2C_PINS_3_4:   sda =  4; scl =  3; break;
-    #endif
-    #if defined(__MK66FX1M0__) // 3.6
-    case I2C_PINS_56_57: sda = 56; scl = 57; break;
-    #endif
-    }
-    if(sda && scl)
-    {
-        // change pin mux to digital I/O
-        pinMode(sda,((i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP));
+        digitalWrite(scl,LOW);
+        delayMicroseconds(5);       // 10us period == 100kHz
         digitalWrite(scl,HIGH);
-        pinMode(scl,OUTPUT);
-
-        while(digitalRead(sda) == 0 && count++ < 10)
-        {
-            digitalWrite(scl,LOW);
-            delayMicroseconds(5);       // 10us period == 100kHz
-            digitalWrite(scl,HIGH);
-            delayMicroseconds(5);
-        }
-
-        // reconfigure pins for I2C
-        pinConfigure_(i2c, bus, i2c->currentPins, i2c->currentPullup, 0);
-
-        // reset config and status
-        if(*(i2c->S) & 0x7F) // reset config if any residual status bits are set
-        {
-            *(i2c->C1) = 0x00; // disable I2C, intr disabled
-            delayMicroseconds(5);
-            *(i2c->C1) = I2C_C1_IICEN; // enable I2C, intr disabled, Rx mode
-            delayMicroseconds(5);
-        }
-        i2c->currentStatus = I2C_WAITING;
+        delayMicroseconds(5);
     }
+
+    // reconfigure pins for I2C
+    pinConfigure_(i2c, bus, scl, sda, i2c->currentPullup, 0);
+
+    // reset config and status
+    if(*(i2c->S) & 0x7F) // reset config if any residual status bits are set
+    {
+        *(i2c->C1) = 0x00; // disable I2C, intr disabled
+        delayMicroseconds(5);
+        *(i2c->C1) = I2C_C1_IICEN; // enable I2C, intr disabled, Rx mode
+        delayMicroseconds(5);
+    }
+    i2c->currentStatus = I2C_WAITING;
 }
 
 
@@ -1655,16 +1413,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 // setup SDA-rising ISR - required for STOP detection in Slave Rx mode for 3.0/3.1/3.2
                 #if defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1/3.2
                     i2c->irqCount = 0;
-                    if(i2c->currentPins == I2C_PINS_18_19)
-                        attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_16_17)
-                        attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
-                    #if I2C_BUS_NUM >= 2
-                    else if(i2c->currentPins == I2C_PINS_29_30)
-                        attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_26_31)
-                        attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
-                    #endif
+                    attachInterrupt(i2c->currentSDA, (bus == 0) ? i2c_t3::sda0_rising_isr : i2c_t3::sda1_rising_isr, RISING);
                 #elif defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
                     *(i2c->FLT) |= I2C_FLT_SSIE; // enable START/STOP intr for LC/3.5/3.6
                 #endif
@@ -1725,16 +1474,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
             // setup SDA-rising ISR - required for STOP detection in Slave Rx mode for 3.0/3.1/3.2
             #if defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1
                 i2c->irqCount = 0;
-                if(i2c->currentPins == I2C_PINS_18_19)
-                    attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
-                else if(i2c->currentPins == I2C_PINS_16_17)
-                    attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
-                #if I2C_BUS_NUM >= 2
-                else if(i2c->currentPins == I2C_PINS_29_30)
-                    attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
-                else if(i2c->currentPins == I2C_PINS_26_31)
-                    attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
-                #endif
+                attachInterrupt(i2c->currentSDA, (bus == 0) ? i2c_t3::sda0_rising_isr : i2c_t3::sda1_rising_isr, RISING);
             #endif
             data = *(i2c->D);
             if(i2c->rxBufferLength < I2C_RX_BUFFER_LENGTH)
@@ -1777,16 +1517,7 @@ void i2c_t3::sda_rising_isr_handler(struct i2cStruct* i2c, uint8_t bus)
     if(!(status & I2C_S_BUSY))
     {
         i2c->currentStatus = I2C_WAITING;
-        if(i2c->currentPins == I2C_PINS_18_19)
-            detachInterrupt(18);
-        else if(i2c->currentPins == I2C_PINS_16_17)
-            detachInterrupt(17);
-        #if I2C_BUS_NUM >= 2
-        else if(i2c->currentPins == I2C_PINS_29_30)
-            detachInterrupt(30);
-        else if(i2c->currentPins == I2C_PINS_26_31)
-            detachInterrupt(31);
-        #endif
+        detachInterrupt(i2c->currentSDA);
         if(i2c->user_onReceive != nullptr)
         {
             i2c->rxBufferIndex = 0;
@@ -1796,18 +1527,7 @@ void i2c_t3::sda_rising_isr_handler(struct i2cStruct* i2c, uint8_t bus)
     else
     {
         if(++(i2c->irqCount) >= 2 || !(i2c->currentMode == I2C_SLAVE))
-        {
-            if(i2c->currentPins == I2C_PINS_18_19)
-                detachInterrupt(18);
-            else if(i2c->currentPins == I2C_PINS_16_17)
-                detachInterrupt(17);
-            #if I2C_BUS_NUM >= 2
-            else if(i2c->currentPins == I2C_PINS_29_30)
-                detachInterrupt(30);
-            else if(i2c->currentPins == I2C_PINS_26_31)
-                detachInterrupt(31);
-            #endif
-        }
+            detachInterrupt(i2c->currentSDA);
     }
 }
 #endif // sda_rising_isr
@@ -1832,6 +1552,21 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
    ------------------------------------------------------------------------------------------------------
    Changelog
    ------------------------------------------------------------------------------------------------------
+
+    - (v10.0) Modified 08Oct17 by Brian (nox771 at gmail.com)
+        - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct
+          SCL,SDA pin definition.  Default assignments have been added for pins/pullup/rate/op_mode, so
+          all those parameters are now optional in begin() calls (marked ^).  New function summary is:
+            - begin(mode, address1, ^i2c_pins, ^i2c_pullup, ^rate, ^i2c_op_mode)
+            - begin(mode, address1, ^pinSCL, ^pinSDA, ^i2c_pullup, ^rate, ^i2c_op_mode)
+            - pinConfigure(i2c_pins, ^pullup)
+            - pinConfigure(pinSCL, pinSDA, ^pullup)
+            - setSCL(pin)
+            - setSDA(pin)
+            - getSCL()
+            - getSDA()
+          Note: internal to i2c structure, currentPins has been replaced by currentSCL and currentSDA
+
 
     - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART
