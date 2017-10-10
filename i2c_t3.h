@@ -355,6 +355,8 @@ struct i2cStruct
     uint8_t  irqCount;                       // IRQ Count, used by SDA-rising ISR (ISR)
     uint8_t  timeoutRxNAK;                   // Rx Timeout NAK flag               (ISR)
     volatile i2c_dma_state activeDMA;        // Active DMA flag                   (User&ISR)
+    void (*user_onTransmitDone)(void);       // Master Tx Callback Function       (User)
+    void (*user_onReqFromDone)(size_t len);  // Master Rx Callback Function       (User)
     void (*user_onReceive)(size_t len);      // Slave Rx Callback Function        (User)
     void (*user_onRequest)(void);            // Slave Tx Callback Function        (User)
     DMAChannel* DMA;                         // DMA Channel object                (User&ISR)
@@ -428,8 +430,8 @@ public:
     // ------------------------------------------------------------------------------------------------------
     // Pin Mapping - convert i2c_pins enum into pin values, intended for internal use only
     //
-    inline uint8_t mapSCL(i2c_pins pins) { return i2c_valid_pins[pins*3+1]; }
-    inline uint8_t mapSDA(i2c_pins pins) { return i2c_valid_pins[pins*3+2]; }
+    inline uint8_t mapSCL(i2c_pins pins) { return i2c_valid_pins[pins*4+1]; }
+    inline uint8_t mapSDA(i2c_pins pins) { return i2c_valid_pins[pins*4+2]; }
 
     // ------------------------------------------------------------------------------------------------------
     // Valid pin checks - verify if SCL or SDA pin is valid, intended for internal use only
@@ -932,6 +934,16 @@ public:
     inline uint8_t getRxAddr(void) { return i2c->rxAddr; }
 
     // ------------------------------------------------------------------------------------------------------
+    // Set callback function for Master Tx
+    //
+    inline void onTransmitDone(void (*function)(void)) { i2c->user_onTransmitDone = function; }
+
+    // ------------------------------------------------------------------------------------------------------
+    // Set callback function for Master Rx
+    //
+    inline void onReqFromDone(void (*function)(size_t len)) { i2c->user_onReqFromDone = function; }
+
+    // ------------------------------------------------------------------------------------------------------
     // Set callback function for Slave Rx
     //
     inline void onReceive(void (*function)(size_t len)) { i2c->user_onReceive = function; }
@@ -971,6 +983,24 @@ extern i2c_t3 Wire;
    ------------------------------------------------------------------------------------------------------
    Changelog
    ------------------------------------------------------------------------------------------------------
+
+    - (v10.0) Modified 08Oct17 by Brian (nox771 at gmail.com)
+        - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct
+          SCL,SDA pin definition.  Default assignments have been added for pins/pullup/rate/op_mode, so
+          all those parameters are now optional in begin() calls (marked ^).  New function summary is:
+            - begin(mode, address1, ^i2c_pins, ^i2c_pullup, ^rate, ^i2c_op_mode)
+            - begin(mode, address1, ^pinSCL, ^pinSDA, ^i2c_pullup, ^rate, ^i2c_op_mode)
+            - pinConfigure(i2c_pins, ^pullup)
+            - pinConfigure(pinSCL, pinSDA, ^pullup)
+            - setSCL(pin)
+            - setSDA(pin)
+            - getSCL()
+            - getSDA()
+          Note: internal to i2c structure, currentPins has been replaced by currentSCL and currentSDA
+        - Added callback functions for background transfers.  Primarily for Master Tx/Rx (sendTransmission/sendRequest),
+          but these will also operate on foreground commands (endTransmission/requestFrom)
+            - onTransmitDone(function) - where function(void) is called when Master Transmit is complete
+            - onReqFromDone(function) - where function(size_t len) is called when Master Receive is complete
 
     - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART

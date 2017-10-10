@@ -3,7 +3,7 @@
     i2c_t3 - I2C library for Teensy 3.x & LC
     Copyright (c) 2013-2017, Brian (nox771 at gmail.com)
 
-    - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 08Oct17 by Brian (nox771 at gmail.com)
 
     Full changelog at end of file
     ------------------------------------------------------------------------------------------------------
@@ -34,7 +34,7 @@
 //
 #define I2C_STRUCT(a1,f,c1,s,d,c2,flt,ra,smb,a2,slth,sltl,scl,sda) \
     {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, scl, sda, \
-     I2C_PULLUP_EXT, 100000, I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, 0}
+     I2C_PULLUP_EXT, 100000, I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, nullptr, nullptr, 0}
 
 struct i2cStruct i2c_t3::i2cData[] =
 {
@@ -1195,13 +1195,16 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         // check if last byte transmitted
                         if(++i2c->txBufferIndex >= i2c->txBufferLength)
                         {
-                            // Tx complete, change to waiting state
-                            i2c->currentStatus = I2C_WAITING;
                             // send STOP if configured
                             if(i2c->currentStop == I2C_STOP)
                                 *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                             else
                                 *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX; // no STOP, stay in Tx mode, intr disabled
+                            // Tx complete, change to waiting state
+                            i2c->currentStatus = I2C_WAITING;
+                            // Call Master Tx complete callback
+                            if(i2c->user_onTransmitDone != nullptr)
+                                i2c->user_onTransmitDone();
                         }
                         else if(i2c->activeDMA == I2C_DMA_ADDR)
                         {
@@ -1339,8 +1342,6 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 if((i2c->rxBufferLength+1) >= i2c->reqCount || (i2c->currentStatus == I2C_TIMEOUT && i2c->timeoutRxNAK))
                 {
                     i2c->timeoutRxNAK = 0; // clear flag
-                    if(i2c->currentStatus != I2C_TIMEOUT)
-                        i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
                     // change to Tx mode
                     *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
                     // grab last data
@@ -1351,15 +1352,25 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                     }
                     // else NAK no STOP
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
+                    // Rx complete, change to waiting state
+                    if(i2c->currentStatus != I2C_TIMEOUT)
+                        i2c->currentStatus = I2C_WAITING;
+                    // Call Master Rx complete callback
+                    if(i2c->user_onReqFromDone != nullptr)
+                    {
+                        i2c->rxBufferIndex = 0;
+                        i2c->user_onReqFromDone(i2c->rxBufferLength);
+                    }
                 }
                 else
                 {
                     // grab next data, not last byte, will ACK
                     i2c->rxBuffer[i2c->rxBufferLength++] = *(i2c->D);
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                 }
                 if(i2c->currentStatus == I2C_TIMEOUT && !i2c->timeoutRxNAK)
                     i2c->timeoutRxNAK = 1; // set flag to indicate NAK sent
-                *(i2c->S) = I2C_S_IICIF; // clear intr
                 return;
             }
         }
@@ -1400,7 +1411,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_TX;
                 i2c->rxAddr = (*(i2c->D) >> 1); // read to get target addr
                 if(i2c->user_onRequest != nullptr)
-                    i2c->user_onRequest(); // load Tx buffer with data
+                    i2c->user_onRequest(); // load Slave Tx buffer with data
                 if(i2c->txBufferLength == 0)
                     i2c->txBuffer[0] = 0; // send 0's if buffer empty
                 *(i2c->D) = i2c->txBuffer[0]; // send first data
@@ -1566,7 +1577,10 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
             - getSCL()
             - getSDA()
           Note: internal to i2c structure, currentPins has been replaced by currentSCL and currentSDA
-
+        - Added callback functions for background transfers.  Primarily for Master Tx/Rx (sendTransmission/sendRequest),
+          but these will also operate on foreground commands (endTransmission/requestFrom)
+            - onTransmitDone(function) - where function(void) is called when Master Transmit is complete
+            - onReqFromDone(function) - where function(size_t len) is called when Master Receive is complete
 
     - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART
@@ -1611,25 +1625,32 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
         - added support for F_BUS frequencies: 60MHz, 56MHz, 48MHz, 36MHz, 24MHz, 16MHz, 8MHz, 4MHz, 2MHz
         - added new rates: I2C_RATE_1800, I2C_RATE_2800, I2C_RATE_3000
         - added new priority escalation - in cases where I2C ISR is blocked by having a lower priority than
-                                          calling function, the I2C will either adjust I2C ISR to a higher priority,
-                                          or switch to Immediate mode as needed.
+                                          calling function, the I2C will either adjust I2C ISR to a higher
+                                          priority, or switch to Immediate mode as needed.
         - added new operating mode control - I2C can be set to operate in ISR mode, DMA mode (Master only),
                                              or Immediate Mode (Master only)
         - added new begin() functions to allow setting the initial operating mode:
-            - begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
-            - begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
+            - begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate,
+                    i2c_op_mode opMode)
+            - begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup,
+                    i2c_rate rate, i2c_op_mode opMode)
         - added new functions:
-            - uint8_t setOpMode(i2c_op_mode opMode) - used to change operating mode on the fly (only when bus is idle)
-            - void sendTransmission() - non-blocking Tx with implicit I2C_STOP, added for symmetry with endTransmission()
-            - uint8_t setRate(uint32_t busFreq, i2c_rate rate) - used to set I2C clock dividers to get desired rate, i2c_rate argument
-            - uint8_t setRate(uint32_t busFreq, uint32_t i2cFreq) - used to set I2C clock dividers to get desired SCL freq, uint32_t argument
+            - uint8_t setOpMode(i2c_op_mode opMode) - used to change operating mode on the fly
+                                                      (only when bus is idle)
+            - void sendTransmission() - non-blocking Tx with implicit I2C_STOP, added for symmetry
+                                        with endTransmission()
+            - uint8_t setRate(uint32_t busFreq, i2c_rate rate) - used to set I2C clock dividers to get
+                                                                 desired rate, i2c_rate argument
+            - uint8_t setRate(uint32_t busFreq, uint32_t i2cFreq) - used to set I2C clock dividers to get
+                                                                    desired SCL freq, uint32_t argument
                                                                     (quantized to nearest i2c_rate)
         - added new Wire compatibility functions:
             - void setClock(uint32_t i2cFreq) - (note: degenerate form of setRate() with busFreq == F_BUS)
             - uint8_t endTransmission(uint8_t sendStop)
             - uint8_t requestFrom(uint8_t addr, uint8_t len)
             - uint8_t requestFrom(uint8_t addr, uint8_t len, uint8_t sendStop)
-        - fixed bug in Slave Range code whereby onRequest() callback occurred prior to updating rxAddr instead of after
+        - fixed bug in Slave Range code whereby onRequest() callback occurred prior to updating rxAddr
+          instead of after
         - fixed bug in arbitration, was missing from Master Tx mode
         - removed I2C1 defines (now included in kinetis.h)
         - removed all debug code (eliminates rbuf dependency)
