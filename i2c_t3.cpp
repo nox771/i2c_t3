@@ -34,7 +34,7 @@
 //
 #define I2C_STRUCT(a1,f,c1,s,d,c2,flt,ra,smb,a2,slth,sltl,scl,sda) \
     {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, scl, sda, \
-     I2C_PULLUP_EXT, 100000, I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, nullptr, nullptr, 0}
+     I2C_PULLUP_EXT, 100000, I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0}
 
 struct i2cStruct i2c_t3::i2cData[] =
 {
@@ -481,7 +481,8 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
         // check if not master
         if(!(*(i2c->C1) & I2C_C1_MST))
         {
-            i2c->currentStatus = I2C_TIMEOUT; // bus not acquired, mark as timeout
+            i2c->currentStatus = I2C_NOT_ACQ; // bus not acquired
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if cannot acquire bus
             return 0;
         }
     }
@@ -648,7 +649,12 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
         {
             // send data, wait for done
             *(i2c->D) = i2c->txBuffer[idx];
-            i2c_wait_(i2c);
+
+            // wait for byte
+            while(!(*(i2c->S) & I2C_S_IICIF) && (timeout == 0 || deltaT < timeout));
+            *(i2c->S) = I2C_S_IICIF;
+            if(timeout && deltaT >= timeout) break;
+
             status = *(i2c->S);
 
             // check arbitration
@@ -659,6 +665,7 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
                 // TODO: this is clearly not right, after ARBL it should drop into IMM slave mode if IAAS=1
                 //       Right now Rx message would be ignored regardless of IAAS
                 *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
+                if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                 return;
             }
             // check if slave ACK'd
@@ -669,21 +676,28 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
                 else
                     i2c->currentStatus = I2C_DATA_NAK; // NAK on Data
                 *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
+                if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
                 return;
             }
         }
-
-        // Set final status
-        if(idx < i2c->txBufferLength)
-            i2c->currentStatus = I2C_TIMEOUT; // Tx incomplete, mark as timeout
-        else
-            i2c->currentStatus = I2C_WAITING; // Tx complete, change to waiting state
 
         // send STOP if configured
         if(i2c->currentStop == I2C_STOP)
             *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
         else
             *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX; // no STOP, stay in Tx mode, intr disabled
+
+        // Set final status
+        if(idx < i2c->txBufferLength)
+        {
+            i2c->currentStatus = I2C_TIMEOUT; // Tx incomplete, mark as timeout
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+        }
+        else
+        {
+            i2c->currentStatus = I2C_WAITING; // Tx complete, change to waiting state
+            if(i2c->user_onTransmitDone != nullptr) i2c->user_onTransmitDone(); // Call Master Tx complete callback
+        }
     }
     //
     // ISR/DMA mode - non-blocking
@@ -780,7 +794,18 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
 
         // Send target address
         *(i2c->D) = (addr << 1) | 1; // address + READ
-        i2c_wait_(i2c);
+
+        // wait for byte
+        while(!(*(i2c->S) & I2C_S_IICIF) && (timeout == 0 || deltaT < timeout));
+        *(i2c->S) = I2C_S_IICIF;
+        if(timeout && deltaT >= timeout)
+        {
+            *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
+            i2c->currentStatus = I2C_TIMEOUT; // Rx incomplete, mark as timeout
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+            return;
+        }
+
         status = *(i2c->S);
 
         // check arbitration
@@ -791,6 +816,7 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
             // TODO: this is clearly not right, after ARBL it should drop into IMM slave mode if IAAS=1
             //       Right now Rx message would be ignored regardless of IAAS
             *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
             return;
         }
         // check if slave ACK'd
@@ -798,6 +824,7 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
         {
             i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
             *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
             return;
         }
         else
@@ -813,7 +840,8 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
             // Master receive loop
             while(i2c->rxBufferLength < i2c->reqCount && i2c->currentStatus == I2C_RECEIVING)
             {
-                i2c_wait_(i2c);
+                while(!(*(i2c->S) & I2C_S_IICIF) && (timeout == 0 || deltaT < timeout));
+                *(i2c->S) = I2C_S_IICIF;
                 chkTimeout = (timeout != 0 && deltaT >= timeout);
                 // check if 2nd to last byte or timeout
                 if((i2c->rxBufferLength+2) == i2c->reqCount || (chkTimeout && !i2c->timeoutRxNAK))
@@ -829,22 +857,29 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
                     // grab last data
                     data = *(i2c->D);
                     i2c->rxBuffer[i2c->rxBufferLength++] = data;
-                    if(chkTimeout)
-                        i2c->currentStatus = I2C_TIMEOUT; // Rx incomplete, mark as timeout
-                    else
-                        i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
                     if(i2c->currentStop == I2C_STOP) // NAK then STOP
                     {
                         delayMicroseconds(1); // empirical patch, lets things settle before issuing STOP
                         *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                     }
                     // else NAK no STOP
+
+                    // Set final status
+                    if(chkTimeout)
+                    {
+                        i2c->currentStatus = I2C_TIMEOUT; // Rx incomplete, mark as timeout
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+                    }
+                    else
+                    {
+                        i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
+                        if(i2c->user_onReqFromDone != nullptr) i2c->user_onReqFromDone(); // Call Master Rx complete callback
+                    }
                 }
                 else
                 {
                     // grab next data, not last byte, will ACK
-                    data = *(i2c->D);
-                    i2c->rxBuffer[i2c->rxBufferLength++] = data;
+                    i2c->rxBuffer[i2c->rxBufferLength++] = *(i2c->D);
                 }
                 if(chkTimeout) i2c->timeoutRxNAK = 1; // set flag to indicate NAK sent
             }
@@ -886,6 +921,7 @@ uint8_t i2c_t3::getError(void)
     case I2C_DATA_NAK: return 3;
     case I2C_ARB_LOST: return 4;
     case I2C_TIMEOUT:  return 4;
+    case I2C_NOT_ACQ:  return 4;
     default: break;
     }
     if(getWriteError()) return 1; // if write_error was set then flag as buffer overflow
@@ -899,12 +935,7 @@ uint8_t i2c_t3::getError(void)
 //
 uint8_t i2c_t3::done_(struct i2cStruct* i2c)
 {
-    return (i2c->currentStatus==I2C_WAITING ||
-            i2c->currentStatus==I2C_ADDR_NAK ||
-            i2c->currentStatus==I2C_DATA_NAK ||
-            i2c->currentStatus==I2C_ARB_LOST ||
-            i2c->currentStatus==I2C_TIMEOUT ||
-            i2c->currentStatus==I2C_BUF_OVF);
+    return (i2c->currentStatus < I2C_SENDING);
 }
 
 
@@ -935,15 +966,16 @@ uint8_t i2c_t3::finish_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout)
         i2c->currentStatus = I2C_TIMEOUT;
     }
 
-    // check exit status, if still Tx/Rx then timeout occurred
-    if(i2c->currentStatus == I2C_SENDING ||
-       i2c->currentStatus == I2C_SEND_ADDR ||
-       i2c->currentStatus == I2C_RECEIVING)
-        i2c->currentStatus = I2C_TIMEOUT; // set to timeout state
+    // check exit status, if not done then timeout occurred
+    if(!done_(i2c)) i2c->currentStatus = I2C_TIMEOUT; // set to timeout state
 
-    // delay to allow bus to settle (eg. allow STOP to complete and be recognized,
-    //                               not just on our side, but on slave side also)
+    // delay to allow bus to settle - allow Timeout or STOP to complete and be recognized.  Timeouts must
+    //                                propagate through ISR, and STOP must be recognized on both
+    //                                Master and Slave sides
     delayMicroseconds(4);
+
+    // note that onTransmitDone, onReqFromDone, onError callbacks are handled in ISR, this is done
+    // because use of this function is optional on background transfers
     if(i2c->currentStatus == I2C_WAITING) return 1;
     return 0;
 }
@@ -1130,6 +1162,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     // DMA says complete at the beginning of its last byte, need to
                     // wait until end of its last byte to re-engage ISR
                     i2c->activeDMA = I2C_DMA_LAST;
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                 }
                 else if(i2c->activeDMA == I2C_DMA_LAST)
                 {
@@ -1141,24 +1174,27 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     i2c->activeDMA = I2C_DMA_OFF;
                     i2c->txBufferIndex = i2c->txBufferLength-1;
                     *(i2c->D) = i2c->txBuffer[i2c->txBufferIndex];
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                 }
                 else if(i2c->DMA->error())
                 {
-                    i2c->DMA->clearInterrupt();
                     i2c->DMA->clearError();
+                    i2c->DMA->clearInterrupt();
                     i2c->activeDMA = I2C_DMA_OFF;
+                    i2c->currentStatus = I2C_DMA_ERR;
                     // check arbitration
                     if(status & I2C_S_ARBL)
                     {
                         // Arbitration Lost
                         i2c->currentStatus = I2C_ARB_LOST;
-                        *(i2c->S) = I2C_S_ARBL | I2C_S_IICIF; // clear arbl flag and intr
-                        *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?), DMA disabled
+                        *(i2c->S) = I2C_S_ARBL; // clear arbl flag
                         i2c->txBufferIndex = 0; // reset Tx buffer index to prepare for resend
-                        return; // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
+                        // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
                     }
+                    *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled, DMA disabled
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
+                    if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if DMA error or ARBL
                 }
-                *(i2c->S) = I2C_S_IICIF; // clear intr
                 return;
             } // end DMA Tx
             else
@@ -1173,10 +1209,12 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         // Arbitration Lost
                         i2c->activeDMA = I2C_DMA_OFF; // clear pending DMA (if happens on address byte)
                         i2c->currentStatus = I2C_ARB_LOST;
-                        *(i2c->S) = I2C_S_ARBL | I2C_S_IICIF; // clear arbl flag and intr
+                        *(i2c->S) = I2C_S_ARBL; // clear arbl flag
                         *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
                         i2c->txBufferIndex = 0; // reset Tx buffer index to prepare for resend
-                        return; // does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read.
+                        // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read.
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                     }
                     // check if slave ACK'd
                     else if(status & I2C_S_RXAK)
@@ -1189,22 +1227,24 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         // send STOP, change to Rx mode, intr disabled
                         // note: Slave NAK is an error, so send STOP regardless of setting
                         *(i2c->C1) = I2C_C1_IICEN;
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
                     }
                     else
                     {
                         // check if last byte transmitted
                         if(++i2c->txBufferIndex >= i2c->txBufferLength)
                         {
+                            // Tx complete, change to waiting state
+                            i2c->currentStatus = I2C_WAITING;
                             // send STOP if configured
                             if(i2c->currentStop == I2C_STOP)
                                 *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                             else
                                 *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX; // no STOP, stay in Tx mode, intr disabled
-                            // Tx complete, change to waiting state
-                            i2c->currentStatus = I2C_WAITING;
-                            // Call Master Tx complete callback
-                            if(i2c->user_onTransmitDone != nullptr)
-                                i2c->user_onTransmitDone();
+                            // run TransmitDone callback when done
+                            *(i2c->S) = I2C_S_IICIF; // clear intr
+                            if(i2c->user_onTransmitDone != nullptr) i2c->user_onTransmitDone();
                         }
                         else if(i2c->activeDMA == I2C_DMA_ADDR)
                         {
@@ -1213,14 +1253,15 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                             *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_MST | I2C_C1_TX | I2C_C1_DMAEN; // intr en, Tx mode, DMA en
                             i2c->DMA->enable();
                             *(i2c->D) = i2c->txBuffer[1]; // DMA will start on next request
+                            *(i2c->S) = I2C_S_IICIF; // clear intr
                         }
                         else
                         {
                             // ISR transmit next byte
                             *(i2c->D) = i2c->txBuffer[i2c->txBufferIndex];
+                            *(i2c->S) = I2C_S_IICIF; // clear intr
                         }
                     }
-                    *(i2c->S) = I2C_S_IICIF; // clear intr
                     return;
                 }
                 else if(i2c->currentStatus == I2C_SEND_ADDR)
@@ -1230,16 +1271,21 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     {
                         // Arbitration Lost
                         i2c->currentStatus = I2C_ARB_LOST;
-                        *(i2c->S) = I2C_S_ARBL | I2C_S_IICIF; // clear arbl flag and intr
+                        *(i2c->S) = I2C_S_ARBL; // clear arbl flag
                         *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
-                        return; // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
+                        // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                     }
                     else if(status & I2C_S_RXAK)
                     {
                         // Slave addr NAK
                         i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
                         // send STOP, change to Rx mode, intr disabled
+                        // note: Slave NAK is an error, so send STOP regardless of setting
                         *(i2c->C1) = I2C_C1_IICEN;
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
                     }
                     else if(i2c->activeDMA == I2C_DMA_ADDR)
                     {
@@ -1248,6 +1294,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_MST | I2C_C1_DMAEN; // intr en, no STOP, change to Rx, DMA en
                         i2c->DMA->enable();
                         data = *(i2c->D); // dummy read
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
                     }
                     else
                     {
@@ -1258,24 +1305,19 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         else
                             *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_MST; // no STOP, change to Rx
                         data = *(i2c->D); // dummy read
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
                     }
-                    *(i2c->S) = I2C_S_IICIF; // clear intr
                     return;
                 }
                 else if(i2c->currentStatus == I2C_TIMEOUT)
                 {
                     // send STOP if configured
                     if(i2c->currentStop == I2C_STOP)
-                    {
-                        // send STOP, change to Rx mode, intr disabled
-                        *(i2c->C1) = I2C_C1_IICEN;
-                    }
+                        *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                     else
-                    {
-                        // no STOP, stay in Tx mode, intr disabled
-                        *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
-                    }
+                        *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX; // no STOP, stay in Tx mode, intr disabled
                     *(i2c->S) = I2C_S_IICIF; // clear intr
+                    if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
                     return;
                 }
                 else
@@ -1300,14 +1342,13 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     i2c->DMA->clearInterrupt();
                     *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_MST | I2C_C1_TXAK; // intr en, Rx mode, DMA disabled, NAK on recv
                     i2c->activeDMA = I2C_DMA_LAST;
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                 }
                 else if(i2c->activeDMA == I2C_DMA_LAST) // last byte
                 {
                     // clear DMA
                     i2c->DMA->clearComplete();
                     i2c->activeDMA = I2C_DMA_OFF;
-                    if(i2c->currentStatus != I2C_TIMEOUT)
-                        i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
                     // change to Tx mode
                     *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
                     // grab last data
@@ -1319,16 +1360,20 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                     }
                     // else NAK no STOP
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
+                    i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
+                    if(i2c->user_onReqFromDone != nullptr) i2c->user_onReqFromDone(); // Call Master Rx complete callback
                 }
                 else if(i2c->DMA->error()) // not sure what would cause this...
                 {
                     i2c->DMA->clearError();
                     i2c->DMA->clearInterrupt();
                     i2c->activeDMA = I2C_DMA_OFF;
-                    i2c->currentStatus = I2C_WAITING;
+                    i2c->currentStatus = I2C_DMA_ERR;
                     *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled, DMA disabled
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
+                    if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if DMA error
                 }
-                *(i2c->S) = I2C_S_IICIF; // clear intr
                 return;
             }
             else
@@ -1353,14 +1398,15 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     }
                     // else NAK no STOP
                     *(i2c->S) = I2C_S_IICIF; // clear intr
-                    // Rx complete, change to waiting state
-                    if(i2c->currentStatus != I2C_TIMEOUT)
-                        i2c->currentStatus = I2C_WAITING;
-                    // Call Master Rx complete callback
-                    if(i2c->user_onReqFromDone != nullptr)
+                    // Rx complete
+                    if(i2c->currentStatus == I2C_TIMEOUT)
                     {
-                        i2c->rxBufferIndex = 0;
-                        i2c->user_onReqFromDone(i2c->rxBufferLength);
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+                    }
+                    else
+                    {
+                        i2c->currentStatus = I2C_WAITING;
+                        if(i2c->user_onReqFromDone != nullptr) i2c->user_onReqFromDone(); // Call Master Rx complete callback
                     }
                 }
                 else
@@ -1380,6 +1426,9 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
         //
         // Slave Mode
         //
+
+        // ARBL makes no sense on Slave, but this might get set if there is a pullup problem and
+        // SCL/SDA get stuck.  This is primarily to guard against ARBL flag getting stuck.
         if(status & I2C_S_ARBL)
         {
             // Arbitration Lost
@@ -1397,10 +1446,8 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
         {
             // If in Slave Rx already, then RepSTART occured, run callback
             if(i2c->currentStatus == I2C_SLAVE_RX && i2c->user_onReceive != nullptr)
-            {
-                i2c->rxBufferIndex = 0;
                 i2c->user_onReceive(i2c->rxBufferLength);
-            }
+
             // Is Addressed As Slave
             if(status & I2C_S_SRW)
             {
@@ -1410,10 +1457,8 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 i2c->txBufferLength = 0;
                 *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_TX;
                 i2c->rxAddr = (*(i2c->D) >> 1); // read to get target addr
-                if(i2c->user_onRequest != nullptr)
-                    i2c->user_onRequest(); // load Slave Tx buffer with data
-                if(i2c->txBufferLength == 0)
-                    i2c->txBuffer[0] = 0; // send 0's if buffer empty
+                if(i2c->user_onRequest != nullptr) i2c->user_onRequest(); // load Slave Tx buffer with data
+                if(i2c->txBufferLength == 0) i2c->txBuffer[0] = 0; // send 0's if buffer empty
                 *(i2c->D) = i2c->txBuffer[0]; // send first data
                 i2c->txBufferIndex = 1;
             }
@@ -1422,9 +1467,12 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 // Addressed Slave Receive
                 //
                 // setup SDA-rising ISR - required for STOP detection in Slave Rx mode for 3.0/3.1/3.2
-                #if defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1/3.2
+                #if defined(__MK20DX256__) && I2C_BUS_NUM == 2 // 3.1/3.2 (dual-bus)
                     i2c->irqCount = 0;
                     attachInterrupt(i2c->currentSDA, (bus == 0) ? i2c_t3::sda0_rising_isr : i2c_t3::sda1_rising_isr, RISING);
+                #elif defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1/3.2 (single-bus)
+                    i2c->irqCount = 0;
+                    attachInterrupt(i2c->currentSDA, i2c_t3::sda0_rising_isr, RISING);
                 #elif defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
                     *(i2c->FLT) |= I2C_FLT_SSIE; // enable START/STOP intr for LC/3.5/3.6
                 #endif
@@ -1472,20 +1520,20 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     *(i2c->FLT) &= ~I2C_FLT_SSIE;                   // disable STOP/START intr (will re-enable on next IAAS)
                     *(i2c->S) = I2C_S_IICIF; // clear intr
                     i2c->currentStatus = I2C_WAITING;
-                    if(i2c->user_onReceive != nullptr)
-                    {
-                        i2c->rxBufferIndex = 0;
-                        i2c->user_onReceive(i2c->rxBufferLength);
-                    }
+                    // Slave Rx complete, run callback
+                    if(i2c->user_onReceive != nullptr) i2c->user_onReceive(i2c->rxBufferLength);
                     return;
                 }
             #endif
             // Continue Slave Receive
             //
             // setup SDA-rising ISR - required for STOP detection in Slave Rx mode for 3.0/3.1/3.2
-            #if defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1
+            #if defined(__MK20DX256__) && I2C_BUS_NUM == 2 // 3.1/3.2 (dual-bus)
                 i2c->irqCount = 0;
                 attachInterrupt(i2c->currentSDA, (bus == 0) ? i2c_t3::sda0_rising_isr : i2c_t3::sda1_rising_isr, RISING);
+            #elif defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1/3.2 (single-bus)
+                i2c->irqCount = 0;
+                attachInterrupt(i2c->currentSDA, i2c_t3::sda0_rising_isr, RISING);
             #endif
             data = *(i2c->D);
             if(i2c->rxBufferLength < I2C_RX_BUFFER_LENGTH)
@@ -1565,9 +1613,10 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
    ------------------------------------------------------------------------------------------------------
 
     - (v10.0) Modified 08Oct17 by Brian (nox771 at gmail.com)
+        - Default assignments have been added to many functions for pins/pullup/rate/op_mode, so
+          all those parameters are now optional in many function calls (marked ^ below)
         - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct
-          SCL,SDA pin definition.  Default assignments have been added for pins/pullup/rate/op_mode, so
-          all those parameters are now optional in begin() calls (marked ^).  New function summary is:
+          SCL,SDA pin definition.  New function summary is:
             - begin(mode, address1, ^i2c_pins, ^i2c_pullup, ^rate, ^i2c_op_mode)
             - begin(mode, address1, ^pinSCL, ^pinSDA, ^i2c_pullup, ^rate, ^i2c_op_mode)
             - pinConfigure(i2c_pins, ^pullup)
@@ -1577,10 +1626,14 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
             - getSCL()
             - getSDA()
           Note: internal to i2c structure, currentPins has been replaced by currentSCL and currentSDA
-        - Added callback functions for background transfers.  Primarily for Master Tx/Rx (sendTransmission/sendRequest),
-          but these will also operate on foreground commands (endTransmission/requestFrom)
-            - onTransmitDone(function) - where function(void) is called when Master Transmit is complete
-            - onReqFromDone(function) - where function(size_t len) is called when Master Receive is complete
+        - Added Master callback functions for completion of transfers.  Primarily for
+          sendTransmission/sendRequest, but these will also work on foreground commands
+          endTransmission/requestFrom.  Also added an Error callback for Master bus errors.
+            - onTransmitDone(function) - where function() is called when Master Transmit is complete
+            - onReqFromDone(function) - where function() is called when Master Receive is complete
+            - onError(function) - where function() is called upon any I2C error which terminates the
+                                  Master bus operation (eg. NAK, timeout, acquire fail, etc)
+        - Fixed blocking conditions that could occur in immediate mode
 
     - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART

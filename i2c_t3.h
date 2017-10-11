@@ -207,17 +207,19 @@ enum i2c_rate     {I2C_RATE_100  = 100000,
                    I2C_RATE_2800 = 2800000,
                    I2C_RATE_3000 = 3000000};
 enum i2c_stop     {I2C_NOSTOP, I2C_STOP};
-enum i2c_status   {I2C_WAITING,
-                   I2C_SENDING,
-                   I2C_SEND_ADDR,
-                   I2C_RECEIVING,
-                   I2C_TIMEOUT,
-                   I2C_ADDR_NAK,
-                   I2C_DATA_NAK,
-                   I2C_ARB_LOST,
-                   I2C_BUF_OVF,
-                   I2C_SLAVE_TX,
-                   I2C_SLAVE_RX};
+enum i2c_status   {I2C_WAITING,     // stopped states
+                   I2C_TIMEOUT,     //  |
+                   I2C_ADDR_NAK,    //  |
+                   I2C_DATA_NAK,    //  |
+                   I2C_ARB_LOST,    //  |
+                   I2C_BUF_OVF,     //  |
+                   I2C_NOT_ACQ,     //  |
+                   I2C_DMA_ERR,     //  V
+                   I2C_SENDING,     // active states
+                   I2C_SEND_ADDR,   //  |
+                   I2C_RECEIVING,   //  |
+                   I2C_SLAVE_TX,    //  |
+                   I2C_SLAVE_RX};   //  V
 enum i2c_dma_state {I2C_DMA_OFF,
                     I2C_DMA_ADDR,
                     I2C_DMA_BULK,
@@ -356,9 +358,10 @@ struct i2cStruct
     uint8_t  timeoutRxNAK;                   // Rx Timeout NAK flag               (ISR)
     volatile i2c_dma_state activeDMA;        // Active DMA flag                   (User&ISR)
     void (*user_onTransmitDone)(void);       // Master Tx Callback Function       (User)
-    void (*user_onReqFromDone)(size_t len);  // Master Rx Callback Function       (User)
+    void (*user_onReqFromDone)(void);        // Master Rx Callback Function       (User)
     void (*user_onReceive)(size_t len);      // Slave Rx Callback Function        (User)
     void (*user_onRequest)(void);            // Slave Tx Callback Function        (User)
+    void (*user_onError)(void);              // Error Callback Function           (User)
     DMAChannel* DMA;                         // DMA Channel object                (User&ISR)
     uint32_t defTimeout;                     // Default Timeout                   (User)
 };
@@ -628,8 +631,7 @@ public:
     //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38
     //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4
     //            Wire3      3.6    I2C_PINS_56_57    57     56  *
-    //      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
-    //      reconfig = 1=reconfigure old pins, 0=do not reconfigure old pins (base routine only)
+    //    ^ pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
     //
     inline uint8_t pinConfigure(i2c_pins pins, i2c_pullup pullup=I2C_PULLUP_EXT)
         { return pinConfigure_(i2c, bus, mapSCL(pins), mapSDA(pins), pullup, 1); }
@@ -686,34 +688,22 @@ public:
     //      address = target 7bit slave address
     //
     void beginTransmission(uint8_t address);
-    inline void beginTransmission(int address) { beginTransmission((uint8_t)address); }
+    inline void beginTransmission(int address) { beginTransmission((uint8_t)address); } // Wire compatibility
 
     // ------------------------------------------------------------------------------------------------------
     // Master Transmit (base routine) - cannot be static due to call to getError() and in turn getWriteError()
     //
     uint8_t endTransmission(struct i2cStruct* i2c, uint8_t bus, i2c_stop sendStop, uint32_t timeout);
     //
-    // Master Transmit - blocking routine with timeout, transmits Tx buffer to slave. i2c_stop parameter can be used
+    // Master Transmit - blocking routine, transmits Tx buffer to slave. i2c_stop parameter can be used
     //                   to indicate if command should end with a STOP(I2C_STOP) or not (I2C_NOSTOP).
+    //                   Timeout can be optionally specified.
     // return: 0=success, 1=data too long, 2=recv addr NACK, 3=recv data NACK, 4=other error
     // parameters:
-    //      i2c_stop = I2C_NOSTOP, I2C_STOP
-    //      timeout = timeout in microseconds
+    //    ^ i2c_stop = I2C_NOSTOP, I2C_STOP
+    //    ^ timeout = timeout in microseconds
     //
-    inline uint8_t endTransmission(i2c_stop sendStop, uint32_t timeout) { return endTransmission(i2c, bus, sendStop, timeout); }
-    //
-    // Master Transmit - blocking routine, transmits Tx buffer to slave
-    // return: 0=success, 1=data too long, 2=recv addr NACK, 3=recv data NACK, 4=other error
-    //
-    inline uint8_t endTransmission(void) { return endTransmission(i2c, bus, I2C_STOP, 0); }
-    //
-    // Master Transmit - blocking routine, transmits Tx buffer to slave. i2c_stop parameter can be used to indicate
-    //                   if command should end with a STOP (I2C_STOP) or not (I2C_NOSTOP).
-    // return: 0=success, 1=data too long, 2=recv addr NACK, 3=recv data NACK, 4=other error
-    // parameters:
-    //      i2c_stop = I2C_NOSTOP, I2C_STOP
-    //
-    inline uint8_t endTransmission(i2c_stop sendStop) { return endTransmission(i2c, bus, sendStop, 0); }
+    inline uint8_t endTransmission(i2c_stop sendStop=I2C_STOP, uint32_t timeout=0) { return endTransmission(i2c, bus, sendStop, timeout); }
     inline uint8_t endTransmission(uint8_t sendStop) { return endTransmission(i2c, bus, (i2c_stop)sendStop, 0); } // Wire compatibility
 
     // ------------------------------------------------------------------------------------------------------
@@ -721,66 +711,37 @@ public:
     //
     static void sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop sendStop, uint32_t timeout);
     //
-    // Send Master Transmit - non-blocking routine, starts transmit of Tx buffer to slave. Defaults to I2C_STOP.
-    //                        Use done() or finish() to determine completion and status() to determine success/fail.
-    // return: none
-    //
-    inline void sendTransmission(void) { sendTransmission_(i2c, bus, I2C_STOP, 0); }
-    //
     // Send Master Transmit - non-blocking routine, starts transmit of Tx buffer to slave. i2c_stop parameter can be
     //                        used to indicate if command should end with a STOP (I2C_STOP) or not (I2C_NOSTOP). Use
-    //                        done() or finish() to determine completion and status() to determine success/fail.
+    //                        done(), finish(), or onTransmitDone() callback to determine completion and
+    //                        status() to determine success/fail.
     // return: none
     // parameters:
-    //      i2c_stop = I2C_NOSTOP, I2C_STOP
+    //    ^ i2c_stop = I2C_NOSTOP, I2C_STOP
     //
-    inline void sendTransmission(i2c_stop sendStop) { sendTransmission_(i2c, bus, sendStop, 0); }
+    inline void sendTransmission(i2c_stop sendStop=I2C_STOP) { sendTransmission_(i2c, bus, sendStop, 0); }
 
     // ------------------------------------------------------------------------------------------------------
     // Master Receive (base routine)
     //
     static size_t requestFrom_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size_t len, i2c_stop sendStop, uint32_t timeout);
     //
-    // Master Receive - blocking routine, requests length bytes from slave at address. Receive data will be placed
-    //                  in the Rx buffer.
-    // return: #bytes received = success, 0=fail
-    // parameters:
-    //      address = target 7bit slave address
-    //      length = number of bytes requested
-    //
-    inline size_t requestFrom(uint8_t addr, size_t len)
-        { return requestFrom_(i2c, bus, addr, len, I2C_STOP, 0); }
-    inline size_t requestFrom(int addr, int len)
-        { return requestFrom_(i2c, bus, (uint8_t)addr, (size_t)len, I2C_STOP, 0); }
-    inline uint8_t requestFrom(uint8_t addr, uint8_t len)
-        { return (uint8_t)requestFrom_(i2c, bus, addr, (size_t)len, I2C_STOP, 0); } // Wire compatibility
-    //
-    // Master Receive - blocking routine, requests length bytes from slave at address. Receive data will be placed
-    //                  in the Rx buffer. i2c_stop parameter can be used to indicate if command should end with a
-    //                  STOP (I2C_STOP) or not (I2C_NOSTOP).
-    // return: #bytes received = success, 0=fail
-    // parameters:
-    //      address = target 7bit slave address
-    //      length = number of bytes requested
-    //      i2c_stop = I2C_NOSTOP, I2C_STOP
-    //
-    inline size_t requestFrom(uint8_t addr, size_t len, i2c_stop sendStop)
-        { return requestFrom_(i2c, bus, addr, len, sendStop, 0); }
-    inline uint8_t requestFrom(uint8_t addr, uint8_t len, uint8_t sendStop)
-        { return (uint8_t)requestFrom_(i2c, bus, addr, (size_t)len, (i2c_stop)sendStop, 0); } // Wire compatibility
-    //
-    // Master Receive - blocking routine with timeout, requests length bytes from slave at address. Receive data will
-    //                  be placed in the Rx buffer. i2c_stop parameter can be used to indicate if command should end
-    //                  with a STOP (I2C_STOP) or not (I2C_NOSTOP).
+    // Master Receive - Requests length bytes from slave at address. Receive data will be placed in the Rx buffer.
+    //                  i2c_stop parameter can be used to indicate if command should end with a STOP (I2C_STOP) or
+    //                  not (I2C_NOSTOP).  Timeout can be optionally specified.
     // return: #bytes received = success, 0=fail (0 length request, NAK, timeout, or bus error)
-    // parameters:
+    // parameters (optional parameters marked '^'):
     //      address = target 7bit slave address
     //      length = number of bytes requested
-    //      i2c_stop = I2C_NOSTOP, I2C_STOP
-    //      timeout = timeout in microseconds
+    //    ^ i2c_stop = I2C_NOSTOP, I2C_STOP
+    //    ^ timeout = timeout in microseconds
     //
-    inline size_t requestFrom(uint8_t addr, size_t len, i2c_stop sendStop, uint32_t timeout)
+    inline size_t requestFrom(uint8_t addr, size_t len, i2c_stop sendStop=I2C_STOP, uint32_t timeout=0)
         { return requestFrom_(i2c, bus, addr, len, sendStop, timeout); }
+    inline size_t requestFrom(int addr, int len)
+        { return requestFrom_(i2c, bus, (uint8_t)addr, (size_t)len, I2C_STOP, 0); } // Wire compatibility
+    inline uint8_t requestFrom(uint8_t addr, uint8_t len, uint8_t sendStop=1)
+        { return (uint8_t)requestFrom_(i2c, bus, addr, (size_t)len, (i2c_stop)sendStop, 0); } // Wire compatibility
 
     // ------------------------------------------------------------------------------------------------------
     // Start Master Receive (base routine)
@@ -789,15 +750,15 @@ public:
     //
     // Start Master Receive - non-blocking routine, starts request for length bytes from slave at address. Receive
     //                        data will be placed in the Rx buffer. i2c_stop parameter can be used to indicate if
-    //                        command should end with a STOP (I2C_STOP) or not (I2C_NOSTOP). Use done() or finish()
-    //                        to determine completion and status() to determine success/fail.
+    //                        command should end with a STOP (I2C_STOP) or not (I2C_NOSTOP). Use done(), finish()
+    //                        or onReqFromDone(len) callback to determine completion and status() to determine success/fail.
     // return: none
     // parameters:
     //      address = target 7bit slave address
     //      length = number of bytes requested
-    //      i2c_stop = I2C_NOSTOP, I2C_STOP
+    //    ^ i2c_stop = I2C_NOSTOP, I2C_STOP
     //
-    inline void sendRequest(uint8_t addr, size_t len, i2c_stop sendStop) { sendRequest_(i2c, bus, addr, len, sendStop, 0); }
+    inline void sendRequest(uint8_t addr, size_t len, i2c_stop sendStop=I2C_STOP) { sendRequest_(i2c, bus, addr, len, sendStop, 0); }
 
     // ------------------------------------------------------------------------------------------------------
     // Get Wire Error - returns "Wire" error code from a failed Tx/Rx command
@@ -941,7 +902,7 @@ public:
     // ------------------------------------------------------------------------------------------------------
     // Set callback function for Master Rx
     //
-    inline void onReqFromDone(void (*function)(size_t len)) { i2c->user_onReqFromDone = function; }
+    inline void onReqFromDone(void (*function)(void)) { i2c->user_onReqFromDone = function; }
 
     // ------------------------------------------------------------------------------------------------------
     // Set callback function for Slave Rx
@@ -954,16 +915,17 @@ public:
     inline void onRequest(void (*function)(void)) { i2c->user_onRequest = function; }
 
     // ------------------------------------------------------------------------------------------------------
+    // Set callback function for Errors
+    //
+    inline void onError(void (*function)(void)) { i2c->user_onError = function; }
+
+    // ------------------------------------------------------------------------------------------------------
     // For compatibility with pre-1.0 sketches and libraries
     inline void send(uint8_t b)             { write(b); }
     inline void send(uint8_t* s, uint8_t n) { write(s, n); }
     inline void send(int n)                 { write((uint8_t)n); }
     inline void send(char* s)               { write(s); }
     inline uint8_t receive(void)            { int c = read(); return (c<0) ? 0 : c; }
-
-    // ------------------------------------------------------------------------------------------------------
-    // Immediate operation
-    static void i2c_wait_(struct i2cStruct* i2c) { while(!(*(i2c->S) & I2C_S_IICIF)){} *(i2c->S) = I2C_S_IICIF; }
 };
 
 extern i2c_t3 Wire;
@@ -984,23 +946,6 @@ extern i2c_t3 Wire;
    Changelog
    ------------------------------------------------------------------------------------------------------
 
-    - (v10.0) Modified 08Oct17 by Brian (nox771 at gmail.com)
-        - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct
-          SCL,SDA pin definition.  Default assignments have been added for pins/pullup/rate/op_mode, so
-          all those parameters are now optional in begin() calls (marked ^).  New function summary is:
-            - begin(mode, address1, ^i2c_pins, ^i2c_pullup, ^rate, ^i2c_op_mode)
-            - begin(mode, address1, ^pinSCL, ^pinSDA, ^i2c_pullup, ^rate, ^i2c_op_mode)
-            - pinConfigure(i2c_pins, ^pullup)
-            - pinConfigure(pinSCL, pinSDA, ^pullup)
-            - setSCL(pin)
-            - setSDA(pin)
-            - getSCL()
-            - getSDA()
-          Note: internal to i2c structure, currentPins has been replaced by currentSCL and currentSDA
-        - Added callback functions for background transfers.  Primarily for Master Tx/Rx (sendTransmission/sendRequest),
-          but these will also operate on foreground commands (endTransmission/requestFrom)
-            - onTransmitDone(function) - where function(void) is called when Master Transmit is complete
-            - onReqFromDone(function) - where function(size_t len) is called when Master Receive is complete
 
     - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART
