@@ -90,5 +90,8 @@ onTransmitDone	KEYWORD2
 onReqFromDone	KEYWORD2
 onReceive	KEYWORD2
 onRequest	KEYWORD2
+onError	KEYWORD2
+getErrorCount	KEYWORD2
+zeroErrorCount	KEYWORD2
 send	KEYWORD2
 receive	KEYWORD2

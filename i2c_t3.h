@@ -3,7 +3,7 @@
     i2c_t3 - I2C library for Teensy 3.x & LC
     Copyright (c) 2013-2017, Brian (nox771 at gmail.com)
 
-    - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 11Oct17 by Brian (nox771 at gmail.com)
 
     Full changelog at end of file
     ------------------------------------------------------------------------------------------------------
@@ -101,6 +101,13 @@
 //
 //#define I2C_AUTO_RETRY
 
+// ------------------------------------------------------------------------------------------------------
+// Error counters - uncomment to make the library track error counts.  When included, errors will be
+//                  tracked on the following (Master mode only):  Reset Bus (auto-retry only), Timeout,
+//                  Addr NAK, Data NAK, Arb Lost, Bus Not Acquired, DMA Errors
+//
+#define I2C_ERROR_COUNTERS
+
 // ======================================================================================================
 // == End User Define Section ===========================================================================
 // ======================================================================================================
@@ -183,6 +190,16 @@
     #define I2C3_INTR_FLAG_INIT do{}while(0)
     #define I2C3_INTR_FLAG_ON   do{}while(0)
     #define I2C3_INTR_FLAG_OFF  do{}while(0)
+#endif
+
+
+// ------------------------------------------------------------------------------------------------------
+// Error counters setup
+//
+#if defined(I2C_ERROR_COUNTERS)
+    #define I2C_ERR_INC(i2c_err_count) do {if(i2c->errCounts[i2c_err_count] < UINT32_MAX) i2c->errCounts[i2c_err_count]++;} while(0)
+#else
+    #define I2C_ERR_INC(i2c_err_count) do{}while(0)
 #endif
 
 
@@ -293,6 +310,13 @@ enum i2c_dma_state {I2C_DMA_OFF,
                                        3, 57, 56, 2,
                                        0,  0,  0, 0 };
 #endif
+enum i2c_err_count {I2C_ERRCNT_RESET_BUS=0,
+                    I2C_ERRCNT_TIMEOUT,
+                    I2C_ERRCNT_ADDR_NAK,
+                    I2C_ERRCNT_DATA_NAK,
+                    I2C_ERRCNT_ARBL,
+                    I2C_ERRCNT_NOT_ACQ,
+                    I2C_ERRCNT_DMA_ERR};
 
 
 // ------------------------------------------------------------------------------------------------------
@@ -364,6 +388,7 @@ struct i2cStruct
     void (*user_onError)(void);              // Error Callback Function           (User)
     DMAChannel* DMA;                         // DMA Channel object                (User&ISR)
     uint32_t defTimeout;                     // Default Timeout                   (User)
+    volatile uint32_t errCounts[7];          // Error Counts Array                (User&ISR)
 };
 
 
@@ -920,6 +945,12 @@ public:
     inline void onError(void (*function)(void)) { i2c->user_onError = function; }
 
     // ------------------------------------------------------------------------------------------------------
+    // Get or zero error counts
+    //
+    inline uint32_t getErrorCount(i2c_err_count counter) { return i2c->errCounts[counter]; }
+    inline void zeroErrorCount(i2c_err_count counter) { i2c->errCounts[counter] = 0; }
+
+    // ------------------------------------------------------------------------------------------------------
     // For compatibility with pre-1.0 sketches and libraries
     inline void send(uint8_t b)             { write(b); }
     inline void send(uint8_t* s, uint8_t n) { write(s, n); }
@@ -946,6 +977,32 @@ extern i2c_t3 Wire;
    Changelog
    ------------------------------------------------------------------------------------------------------
 
+    - (v10.0) Modified 11Oct17 by Brian (nox771 at gmail.com)
+        - Default assignments have been added to many functions for pins/pullup/rate/op_mode, so
+          all those parameters are now optional in many function calls (marked ^ below)
+        - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct
+          SCL,SDA pin definition (using any valid SCL and SDA pin).  New function summary is:
+            - begin(mode, address1, ^i2c_pins, ^i2c_pullup, ^rate, ^i2c_op_mode)
+            - begin(mode, address1, ^pinSCL, ^pinSDA, ^i2c_pullup, ^rate, ^i2c_op_mode)
+            - pinConfigure(i2c_pins, ^pullup)
+            - pinConfigure(pinSCL, pinSDA, ^pullup)
+            - setSCL(pin)
+            - setSDA(pin)
+            - getSCL()
+            - getSDA()
+          Note: internal to i2c structure, currentPins has been replaced by currentSCL and currentSDA
+        - Added Master callback functions for completion of transfers.  Primarily for
+          sendTransmission/sendRequest, but these will also work on foreground commands
+          endTransmission/requestFrom.  Also added an Error callback for Master bus errors.
+            - onTransmitDone(function) - where function() is called when Master Transmit is complete
+            - onReqFromDone(function) - where function() is called when Master Receive is complete
+            - onError(function) - where function() is called upon any I2C error which terminates the
+                                  Master bus operation (eg. NAK, timeout, acquire fail, etc)
+        - Fixed blocking conditions that could occur in immediate mode
+        - Added error counters which may be optionally enabled via I2C_ERROR_COUNTERS define.  When
+          enabled it will track (Master mode only): Reset Bus (auto-retry only), Timeout, Addr NAK,
+          Data NAK, Arb Lost, Bus Not Acquired, DMA Errors.
+            - i2c_err_count enum, getErrorCount(), and zeroErrorCount() functions added
 
     - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART

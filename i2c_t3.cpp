@@ -3,7 +3,7 @@
     i2c_t3 - I2C library for Teensy 3.x & LC
     Copyright (c) 2013-2017, Brian (nox771 at gmail.com)
 
-    - (v10.0) Modified 08Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 11Oct17 by Brian (nox771 at gmail.com)
 
     Full changelog at end of file
     ------------------------------------------------------------------------------------------------------
@@ -33,8 +33,8 @@
 // Static inits
 //
 #define I2C_STRUCT(a1,f,c1,s,d,c2,flt,ra,smb,a2,slth,sltl,scl,sda) \
-    {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, scl, sda, \
-     I2C_PULLUP_EXT, 100000, I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0}
+    {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, scl, sda, I2C_PULLUP_EXT, 100000, \
+     I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0, {} }
 
 struct i2cStruct i2c_t3::i2cData[] =
 {
@@ -470,6 +470,7 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
             if(!(*(i2c->C1) & I2C_C1_MST))
             {
                 resetBus_(i2c,bus);
+                I2C_ERR_INC(I2C_ERRCNT_RESET_BUS);
                 if(!(*(i2c->S) & I2C_S_BUSY))
                 {
                     // become the bus master in transmit mode (send start)
@@ -482,6 +483,7 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
         if(!(*(i2c->C1) & I2C_C1_MST))
         {
             i2c->currentStatus = I2C_NOT_ACQ; // bus not acquired
+            I2C_ERR_INC(I2C_ERRCNT_NOT_ACQ);
             if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if cannot acquire bus
             return 0;
         }
@@ -665,6 +667,7 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
                 // TODO: this is clearly not right, after ARBL it should drop into IMM slave mode if IAAS=1
                 //       Right now Rx message would be ignored regardless of IAAS
                 *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
+                I2C_ERR_INC(I2C_ERRCNT_ARBL);
                 if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                 return;
             }
@@ -672,9 +675,15 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
             else if(status & I2C_S_RXAK)
             {
                 if(idx == 0)
+                {
                     i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
+                    I2C_ERR_INC(I2C_ERRCNT_ADDR_NAK);
+                }
                 else
+                {
                     i2c->currentStatus = I2C_DATA_NAK; // NAK on Data
+                    I2C_ERR_INC(I2C_ERRCNT_DATA_NAK);
+                }
                 *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                 if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
                 return;
@@ -691,6 +700,7 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
         if(idx < i2c->txBufferLength)
         {
             i2c->currentStatus = I2C_TIMEOUT; // Tx incomplete, mark as timeout
+            I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
             if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
         }
         else
@@ -802,6 +812,7 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
         {
             *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
             i2c->currentStatus = I2C_TIMEOUT; // Rx incomplete, mark as timeout
+            I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
             if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
             return;
         }
@@ -816,6 +827,7 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
             // TODO: this is clearly not right, after ARBL it should drop into IMM slave mode if IAAS=1
             //       Right now Rx message would be ignored regardless of IAAS
             *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
+            I2C_ERR_INC(I2C_ERRCNT_ARBL);
             if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
             return;
         }
@@ -824,6 +836,7 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
         {
             i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
             *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
+            I2C_ERR_INC(I2C_ERRCNT_ADDR_NAK);
             if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
             return;
         }
@@ -868,6 +881,7 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
                     if(chkTimeout)
                     {
                         i2c->currentStatus = I2C_TIMEOUT; // Rx incomplete, mark as timeout
+                        I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
                         if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
                     }
                     else
@@ -1182,11 +1196,13 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     i2c->DMA->clearInterrupt();
                     i2c->activeDMA = I2C_DMA_OFF;
                     i2c->currentStatus = I2C_DMA_ERR;
+                    I2C_ERR_INC(I2C_ERRCNT_DMA_ERR);
                     // check arbitration
                     if(status & I2C_S_ARBL)
                     {
                         // Arbitration Lost
                         i2c->currentStatus = I2C_ARB_LOST;
+                        I2C_ERR_INC(I2C_ERRCNT_ARBL);
                         *(i2c->S) = I2C_S_ARBL; // clear arbl flag
                         i2c->txBufferIndex = 0; // reset Tx buffer index to prepare for resend
                         // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
@@ -1214,6 +1230,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         i2c->txBufferIndex = 0; // reset Tx buffer index to prepare for resend
                         // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read.
                         *(i2c->S) = I2C_S_IICIF; // clear intr
+                        I2C_ERR_INC(I2C_ERRCNT_ARBL);
                         if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                     }
                     // check if slave ACK'd
@@ -1221,9 +1238,15 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     {
                         i2c->activeDMA = I2C_DMA_OFF; // clear pending DMA (if happens on address byte)
                         if(i2c->txBufferIndex == 0)
+                        {
                             i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
+                            I2C_ERR_INC(I2C_ERRCNT_ADDR_NAK);
+                        }
                         else
+                        {
                             i2c->currentStatus = I2C_DATA_NAK; // NAK on Data
+                            I2C_ERR_INC(I2C_ERRCNT_DATA_NAK);
+                        }
                         // send STOP, change to Rx mode, intr disabled
                         // note: Slave NAK is an error, so send STOP regardless of setting
                         *(i2c->C1) = I2C_C1_IICEN;
@@ -1275,6 +1298,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
                         // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
                         *(i2c->S) = I2C_S_IICIF; // clear intr
+                        I2C_ERR_INC(I2C_ERRCNT_ARBL);
                         if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                     }
                     else if(status & I2C_S_RXAK)
@@ -1285,6 +1309,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         // note: Slave NAK is an error, so send STOP regardless of setting
                         *(i2c->C1) = I2C_C1_IICEN;
                         *(i2c->S) = I2C_S_IICIF; // clear intr
+                        I2C_ERR_INC(I2C_ERRCNT_ADDR_NAK);
                         if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
                     }
                     else if(i2c->activeDMA == I2C_DMA_ADDR)
@@ -1317,6 +1342,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     else
                         *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX; // no STOP, stay in Tx mode, intr disabled
                     *(i2c->S) = I2C_S_IICIF; // clear intr
+                    I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
                     if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
                     return;
                 }
@@ -1372,6 +1398,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     i2c->currentStatus = I2C_DMA_ERR;
                     *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled, DMA disabled
                     *(i2c->S) = I2C_S_IICIF; // clear intr
+                    I2C_ERR_INC(I2C_ERRCNT_DMA_ERR);
                     if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if DMA error
                 }
                 return;
@@ -1401,6 +1428,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     // Rx complete
                     if(i2c->currentStatus == I2C_TIMEOUT)
                     {
+                        I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
                         if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
                     }
                     else
@@ -1612,11 +1640,11 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
    Changelog
    ------------------------------------------------------------------------------------------------------
 
-    - (v10.0) Modified 08Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 11Oct17 by Brian (nox771 at gmail.com)
         - Default assignments have been added to many functions for pins/pullup/rate/op_mode, so
           all those parameters are now optional in many function calls (marked ^ below)
         - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct
-          SCL,SDA pin definition.  New function summary is:
+          SCL,SDA pin definition (using any valid SCL and SDA pin).  New function summary is:
             - begin(mode, address1, ^i2c_pins, ^i2c_pullup, ^rate, ^i2c_op_mode)
             - begin(mode, address1, ^pinSCL, ^pinSDA, ^i2c_pullup, ^rate, ^i2c_op_mode)
             - pinConfigure(i2c_pins, ^pullup)
@@ -1634,6 +1662,10 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
             - onError(function) - where function() is called upon any I2C error which terminates the
                                   Master bus operation (eg. NAK, timeout, acquire fail, etc)
         - Fixed blocking conditions that could occur in immediate mode
+        - Added error counters which may be optionally enabled via I2C_ERROR_COUNTERS define.  When
+          enabled it will track (Master mode only): Reset Bus (auto-retry only), Timeout, Addr NAK,
+          Data NAK, Arb Lost, Bus Not Acquired, DMA Errors.
+            - i2c_err_count enum, getErrorCount(), and zeroErrorCount() functions added
 
     - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART
