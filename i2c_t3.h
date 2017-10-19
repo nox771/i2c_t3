@@ -614,7 +614,7 @@ public:
     inline void setClock(uint32_t i2cFreq)
     {
         #if defined(__MKL26Z64__) // LC
-            if(i2c->currentPins == I2C_PINS_22_23)
+            if(i2c->currentSCL == 22)
                 setRate_(i2c, (uint32_t)F_CPU, i2cFreq); // LC Wire1 bus uses system clock (F_CPU) instead of bus clock (F_BUS)
             else
                 setRate_(i2c, (uint32_t)F_BUS, i2cFreq);

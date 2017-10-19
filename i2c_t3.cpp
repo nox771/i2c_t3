@@ -1474,7 +1474,10 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
         {
             // If in Slave Rx already, then RepSTART occured, run callback
             if(i2c->currentStatus == I2C_SLAVE_RX && i2c->user_onReceive != nullptr)
+            {
+                i2c->rxBufferIndex = 0;
                 i2c->user_onReceive(i2c->rxBufferLength);
+            }
 
             // Is Addressed As Slave
             if(status & I2C_S_SRW)
@@ -1549,7 +1552,11 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     *(i2c->S) = I2C_S_IICIF; // clear intr
                     i2c->currentStatus = I2C_WAITING;
                     // Slave Rx complete, run callback
-                    if(i2c->user_onReceive != nullptr) i2c->user_onReceive(i2c->rxBufferLength);
+                    if(i2c->user_onReceive != nullptr) 
+                    {
+                        i2c->rxBufferIndex = 0;
+                        i2c->user_onReceive(i2c->rxBufferLength);
+                    }
                     return;
                 }
             #endif
