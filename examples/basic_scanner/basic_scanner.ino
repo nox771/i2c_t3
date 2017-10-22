@@ -53,7 +53,7 @@ void loop()
 
         if(!found) Serial.print("No devices found.\n");
         
-        delay(100); // delay to space out tests
+        delay(500); // delay to space out tests
     }
 }
 

@@ -3,7 +3,7 @@
     i2c_t3 - I2C library for Teensy 3.x & LC
     Copyright (c) 2013-2017, Brian (nox771 at gmail.com)
 
-    - (v10.0) Modified 11Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
 
     Full changelog at end of file
     ------------------------------------------------------------------------------------------------------
@@ -102,9 +102,11 @@
 //#define I2C_AUTO_RETRY
 
 // ------------------------------------------------------------------------------------------------------
-// Error counters - uncomment to make the library track error counts.  When included, errors will be
-//                  tracked on the following (Master mode only):  Reset Bus (auto-retry only), Timeout,
-//                  Addr NAK, Data NAK, Arb Lost, Bus Not Acquired, DMA Errors
+// Error counters - uncomment to make the library track error counts.  Error counts can be retrieved or 
+//                  zeroed using the getErrorCount() and zeroErrorCount() functions respectively.  
+//                  When included, errors will be tracked on the following (Master-mode only):  
+//                  Reset Bus (auto-retry only), Timeout, Addr NAK, Data NAK, Arb Lost, Bus Not Acquired, 
+//                  DMA Errors
 //
 #define I2C_ERROR_COUNTERS
 
@@ -479,24 +481,23 @@ public:
     //
     // Initialize I2C (Master) - initializes I2C as Master mode, external pullups, 100kHz rate,
     //                           and default pin setting
-    // default pin setting:
-    //      Wire:  I2C_PINS_18_19
-    //      Wire1: I2C_PINS_29_30 (3.1/3.2), I2C_PINS_22_23 (LC), I2C_PINS_37_38 (3.5/3.6)
-    //      Wire2: I2C_PINS_3_4   (3.5/3.6)
-    //      Wire3: I2C_PINS_56_57 (3.6)
+    // default pin setting SCL/SDA:
+    //      Wire:   19/18 
+    //      Wire1:  29/30 (3.1/3.2), 22/23 (LC), 37/38 (3.5/3.6)
+    //      Wire2:   3/4  (3.5/3.6)
+    //      Wire3:  57/56 (3.6)
     // return: none
-    // parameters: none
     //
     inline void begin(void)
         { begin_(i2c, bus, I2C_MASTER, 0, 0, 0, 0, I2C_PULLUP_EXT, 100000, I2C_OP_MODE_ISR); }
     //
     // Initialize I2C (Slave) - initializes I2C as Slave mode using address, external pullups, 100kHz rate,
     //                          and default pin setting
-    // default pin setting:
-    //      Wire:  I2C_PINS_18_19
-    //      Wire1: I2C_PINS_29_30 (3.1/3.2), I2C_PINS_22_23 (LC), I2C_PINS_37_38 (3.5/3.6)
-    //      Wire2: I2C_PINS_3_4   (3.5/3.6)
-    //      Wire3: I2C_PINS_56_57 (3.6)
+    // default pin setting SCL/SDA:
+    //      Wire:   19/18 
+    //      Wire1:  29/30 (3.1/3.2), 22/23 (LC), 37/38 (3.5/3.6)
+    //      Wire2:   3/4  (3.5/3.6)
+    //      Wire3:  57/56 (3.6)
     // return: none
     // parameters:
     //      address = 7bit slave address of device
@@ -511,30 +512,31 @@ public:
     // parameters (optional parameters marked '^'):
     //      mode = I2C_MASTER, I2C_SLAVE
     //      address1 = 7bit slave address when configured as Slave (ignored for Master mode)
-    //    ^ address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
-    //    ^ pins = pins to use, can be specified as 'i2c_pins' enum,
+    //     ^address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
+    //     ^pins = pins to use, can be specified as 'i2c_pins' enum,
     //             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
-    //          Interface  Devices     Pin Name      SCL    SDA
-    //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
-    //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
-    //             Wire      All    I2C_PINS_18_19    19     18  *
+    //          Interface  Devices     Pin Name      SCL    SDA   Default
+    //          ---------  -------  --------------  -----  -----  -------  
+    //             Wire      All    I2C_PINS_16_17    16     17             
+    //             Wire      All    I2C_PINS_18_19    19*    18      +
     //             Wire    3.5/3.6  I2C_PINS_7_8       7      8
     //             Wire    3.5/3.6  I2C_PINS_33_34    33     34
     //             Wire    3.5/3.6  I2C_PINS_47_48    47     48
-    //            Wire1       LC    I2C_PINS_22_23    22     23
+    //            Wire1       LC    I2C_PINS_22_23    22     23      +
     //            Wire1    3.1/3.2  I2C_PINS_26_31    26     31
-    //            Wire1    3.1/3.2  I2C_PINS_29_30    29     30
-    //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38
-    //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4
-    //            Wire3      3.6    I2C_PINS_56_57    57     56  *
-    //    ^ pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
-    //    ^ rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
+    //            Wire1    3.1/3.2  I2C_PINS_29_30    29     30      +
+    //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38      +
+    //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4      +
+    //            Wire3      3.6    I2C_PINS_56_57    57*    56      +
+    //          (note: in almost all cases SCL is the lower pin #, except cases marked *)
+    //     ^pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT (default I2C_PULLUP_EXT)
+    //     ^rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
     //             following enum values (deprecated):
     //             I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400,
     //             I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200,
     //             I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400,
     //             I2C_RATE_2800, I2C_RATE_3000
-    //    ^ opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
+    //     ^opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults ISR mode)
     //
     inline void begin(i2c_mode mode, uint8_t address1, i2c_pins pins=I2C_PINS_DEFAULT,
                       i2c_pullup pullup=I2C_PULLUP_EXT, uint32_t rate=400000, i2c_op_mode opMode=I2C_OP_MODE_ISR)
@@ -643,20 +645,21 @@ public:
     // parameters:
     //      pins = pins to use, can be specified as 'i2c_pins' enum,
     //             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
-    //          Interface  Devices     Pin Name      SCL    SDA
-    //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
-    //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
-    //             Wire      All    I2C_PINS_18_19    19     18  *
+    //          Interface  Devices     Pin Name      SCL    SDA   Default
+    //          ---------  -------  --------------  -----  -----  -------  
+    //             Wire      All    I2C_PINS_16_17    16     17             
+    //             Wire      All    I2C_PINS_18_19    19*    18      +
     //             Wire    3.5/3.6  I2C_PINS_7_8       7      8
     //             Wire    3.5/3.6  I2C_PINS_33_34    33     34
     //             Wire    3.5/3.6  I2C_PINS_47_48    47     48
-    //            Wire1       LC    I2C_PINS_22_23    22     23
+    //            Wire1       LC    I2C_PINS_22_23    22     23      +
     //            Wire1    3.1/3.2  I2C_PINS_26_31    26     31
-    //            Wire1    3.1/3.2  I2C_PINS_29_30    29     30
-    //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38
-    //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4
-    //            Wire3      3.6    I2C_PINS_56_57    57     56  *
-    //    ^ pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
+    //            Wire1    3.1/3.2  I2C_PINS_29_30    29     30      +
+    //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38      +
+    //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4      +
+    //            Wire3      3.6    I2C_PINS_56_57    57*    56      +
+    //          (note: in almost all cases SCL is the lower pin #, except cases marked *)
+    //      ^pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT (default I2C_PULLUP_EXT)
     //
     inline uint8_t pinConfigure(i2c_pins pins, i2c_pullup pullup=I2C_PULLUP_EXT)
         { return pinConfigure_(i2c, bus, mapSCL(pins), mapSDA(pins), pullup, 1); }
@@ -674,7 +677,7 @@ public:
     // ------------------------------------------------------------------------------------------------------
     // Get SCL/SDA - get the current SCL or SDA pin
     // return: pin used
-    // parameters: none
+    // 
     inline uint8_t getSCL(void) { return i2c->currentSCL; }
     inline uint8_t getSDA(void) { return i2c->currentSDA; }
 
@@ -722,11 +725,11 @@ public:
     //
     // Master Transmit - blocking routine, transmits Tx buffer to slave. i2c_stop parameter can be used
     //                   to indicate if command should end with a STOP(I2C_STOP) or not (I2C_NOSTOP).
-    //                   Timeout can be optionally specified.
+    //                   Timeout parameter can be optionally specified.
     // return: 0=success, 1=data too long, 2=recv addr NACK, 3=recv data NACK, 4=other error
     // parameters:
-    //    ^ i2c_stop = I2C_NOSTOP, I2C_STOP
-    //    ^ timeout = timeout in microseconds
+    //      ^i2c_stop = I2C_NOSTOP, I2C_STOP (default STOP)
+    //      ^timeout = timeout in microseconds (default 0 = infinite wait)
     //
     inline uint8_t endTransmission(i2c_stop sendStop=I2C_STOP, uint32_t timeout=0) { return endTransmission(i2c, bus, sendStop, timeout); }
     inline uint8_t endTransmission(uint8_t sendStop) { return endTransmission(i2c, bus, (i2c_stop)sendStop, 0); } // Wire compatibility
@@ -739,10 +742,11 @@ public:
     // Send Master Transmit - non-blocking routine, starts transmit of Tx buffer to slave. i2c_stop parameter can be
     //                        used to indicate if command should end with a STOP (I2C_STOP) or not (I2C_NOSTOP). Use
     //                        done(), finish(), or onTransmitDone() callback to determine completion and
-    //                        status() to determine success/fail.
+    //                        status() to determine success/fail.  Note that sendTransmission() does not currently
+    //                        support timeouts (aside from initial bus acquisition which does support it). 
     // return: none
     // parameters:
-    //    ^ i2c_stop = I2C_NOSTOP, I2C_STOP
+    //     ^i2c_stop = I2C_NOSTOP, I2C_STOP (default STOP)
     //
     inline void sendTransmission(i2c_stop sendStop=I2C_STOP) { sendTransmission_(i2c, bus, sendStop, 0); }
 
@@ -753,13 +757,13 @@ public:
     //
     // Master Receive - Requests length bytes from slave at address. Receive data will be placed in the Rx buffer.
     //                  i2c_stop parameter can be used to indicate if command should end with a STOP (I2C_STOP) or
-    //                  not (I2C_NOSTOP).  Timeout can be optionally specified.
+    //                  not (I2C_NOSTOP).  Timeout parameter can be optionally specified.
     // return: #bytes received = success, 0=fail (0 length request, NAK, timeout, or bus error)
-    // parameters (optional parameters marked '^'):
+    // parameters:
     //      address = target 7bit slave address
     //      length = number of bytes requested
-    //    ^ i2c_stop = I2C_NOSTOP, I2C_STOP
-    //    ^ timeout = timeout in microseconds
+    //     ^i2c_stop = I2C_NOSTOP, I2C_STOP (default STOP)
+    //     ^timeout = timeout in microseconds (default 0 = infinite wait)
     //
     inline size_t requestFrom(uint8_t addr, size_t len, i2c_stop sendStop=I2C_STOP, uint32_t timeout=0)
         { return requestFrom_(i2c, bus, addr, len, sendStop, timeout); }
@@ -776,12 +780,13 @@ public:
     // Start Master Receive - non-blocking routine, starts request for length bytes from slave at address. Receive
     //                        data will be placed in the Rx buffer. i2c_stop parameter can be used to indicate if
     //                        command should end with a STOP (I2C_STOP) or not (I2C_NOSTOP). Use done(), finish()
-    //                        or onReqFromDone(len) callback to determine completion and status() to determine success/fail.
+    //                        or onReqFromDone() callback to determine completion and status() to determine 
+    //                        success/fail.
     // return: none
     // parameters:
     //      address = target 7bit slave address
     //      length = number of bytes requested
-    //    ^ i2c_stop = I2C_NOSTOP, I2C_STOP
+    //     ^i2c_stop = I2C_NOSTOP, I2C_STOP (default STOP)
     //
     inline void sendRequest(uint8_t addr, size_t len, i2c_stop sendStop=I2C_STOP) { sendRequest_(i2c, bus, addr, len, sendStop, 0); }
 
@@ -793,9 +798,8 @@ public:
 
     // ------------------------------------------------------------------------------------------------------
     // Return Status - returns current status of I2C (enum return value)
-    // return: I2C_WAITING, I2C_SENDING, I2C_SEND_ADDR, I2C_RECEIVING,
-    //         I2C_TIMEOUT, I2C_ADDR_NAK, I2C_DATA_NAK, I2C_ARB_LOST,
-    //         I2C_SLAVE_TX, I2C_SLAVE_RX
+    // return: I2C_WAITING, I2C_TIMEOUT, I2C_ADDR_NAK, I2C_DATA_NAK, I2C_ARB_LOST, I2C_BUF_OVF,
+    //         I2C_NOT_ACQ, I2C_DMA_ERR, I2C_SENDING, I2C_SEND_ADDR, I2C_RECEIVING, I2C_SLAVE_TX, I2C_SLAVE_RX
     //
     inline i2c_status status(void) { return i2c->currentStatus; }
 
@@ -814,17 +818,12 @@ public:
     //
     static uint8_t finish_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout);
     //
-    // Finish - blocking routine, loops until Tx/Rx is complete
-    // return: 1=success (Tx or Rx completed, no error), 0=fail (NAK, timeout or Arb Lost)
-    //
-    inline uint8_t finish(void) { return finish_(i2c, bus, 0); }
-    //
-    // Finish - blocking routine with timeout, loops until Tx/Rx is complete or timeout occurs
+    // Finish - blocking routine, loops until Tx/Rx is complete.  Timeout parameter can be optionally specified.
     // return: 1=success (Tx or Rx completed, no error), 0=fail (NAK, timeout or Arb Lost)
     // parameters:
-    //      timeout = timeout in microseconds
+    //      ^timeout = timeout in microseconds (default 0 = infinite wait)
     //
-    inline uint8_t finish(uint32_t timeout) { return finish_(i2c, bus, timeout); }
+    inline uint8_t finish(uint32_t timeout=0) { return finish_(i2c, bus, timeout); }
 
     // ------------------------------------------------------------------------------------------------------
     // Write - write data byte to Tx buffer
@@ -945,9 +944,20 @@ public:
     inline void onError(void (*function)(void)) { i2c->user_onError = function; }
 
     // ------------------------------------------------------------------------------------------------------
-    // Get or zero error counts
+    // Get error count from specified counter
+    // return: error count
+    // parameters:
+    //      counter = I2C_ERRCNT_RESET_BUS, I2C_ERRCNT_TIMEOUT, I2C_ERRCNT_ADDR_NAK, I2C_ERRCNT_DATA_NAK,
+    //                I2C_ERRCNT_ARBL, I2C_ERRCNT_NOT_ACQ, I2C_ERRCNT_DMA_ERR
     //
     inline uint32_t getErrorCount(i2c_err_count counter) { return i2c->errCounts[counter]; }
+    // ------------------------------------------------------------------------------------------------------
+    // Zero error count of specified counter
+    // return: none
+    // parameters:
+    //      counter = I2C_ERRCNT_RESET_BUS, I2C_ERRCNT_TIMEOUT, I2C_ERRCNT_ADDR_NAK, I2C_ERRCNT_DATA_NAK,
+    //                I2C_ERRCNT_ARBL, I2C_ERRCNT_NOT_ACQ, I2C_ERRCNT_DMA_ERR
+    //
     inline void zeroErrorCount(i2c_err_count counter) { i2c->errCounts[counter] = 0; }
 
     // ------------------------------------------------------------------------------------------------------
@@ -977,7 +987,7 @@ extern i2c_t3 Wire;
    Changelog
    ------------------------------------------------------------------------------------------------------
 
-    - (v10.0) Modified 11Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
         - Default assignments have been added to many functions for pins/pullup/rate/op_mode, so
           all those parameters are now optional in many function calls (marked ^ below)
         - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct

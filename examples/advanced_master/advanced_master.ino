@@ -427,29 +427,7 @@ void print_i2c_setup()
     case I2C_OP_MODE_ISR: Serial.print("ISR    "); break;
     case I2C_OP_MODE_DMA: Serial.printf("DMA[%d] ",Wire.i2c->DMA->channel); break;
     }
-    Serial.print("Pins:");
-    switch(Wire.i2c->currentPins)
-    {
-    case I2C_PINS_18_19: Serial.print("18/19 "); break;
-    case I2C_PINS_16_17: Serial.print("16/17 "); break;
-    #if defined(__MKL26Z64__)  // LC
-    case I2C_PINS_22_23: Serial.print("22/23 "); break;
-    #endif
-    #if defined(__MK20DX256__)  // 3.1/3.2
-    case I2C_PINS_29_30: Serial.print("29/30 "); break;
-    case I2C_PINS_26_31: Serial.print("26/31 "); break;
-    #endif
-    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-    case I2C_PINS_3_4: Serial.print("3/4 "); break;
-    case I2C_PINS_7_8: Serial.print("7/8 "); break;
-    case I2C_PINS_33_34: Serial.print("33/34 "); break;
-    case I2C_PINS_37_38: Serial.print("37/38 "); break;
-    case I2C_PINS_47_48: Serial.print("47/48 "); break;
-    #endif
-    #if defined(__MK66FX1M0__)  // 3.6
-    case I2C_PINS_56_57: Serial.print("56/57 "); break;
-    #endif
-    }
+    Serial.printf("Pins: %d/%d ", Wire.i2c->currentSCL, Wire.i2c->currentSDA);
 }
 
 

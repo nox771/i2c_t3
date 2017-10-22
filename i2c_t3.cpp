@@ -3,7 +3,7 @@
     i2c_t3 - I2C library for Teensy 3.x & LC
     Copyright (c) 2013-2017, Brian (nox771 at gmail.com)
 
-    - (v10.0) Modified 11Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
 
     Full changelog at end of file
     ------------------------------------------------------------------------------------------------------
@@ -1647,7 +1647,7 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
    Changelog
    ------------------------------------------------------------------------------------------------------
 
-    - (v10.0) Modified 11Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
         - Default assignments have been added to many functions for pins/pullup/rate/op_mode, so
           all those parameters are now optional in many function calls (marked ^ below)
         - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct
