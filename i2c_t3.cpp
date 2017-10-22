@@ -3,7 +3,7 @@
     i2c_t3 - I2C library for Teensy 3.x & LC
     Copyright (c) 2013-2017, Brian (nox771 at gmail.com)
 
-    - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
+    - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
 
     Full changelog at end of file
     ------------------------------------------------------------------------------------------------------
@@ -32,25 +32,25 @@
 // ------------------------------------------------------------------------------------------------------
 // Static inits
 //
-#define I2C_STRUCT(a1,f,c1,s,d,c2,flt,ra,smb,a2,slth,sltl,pins) \
-    {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, pins, \
-     I2C_PULLUP_EXT, 100000, I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, 0}
+#define I2C_STRUCT(a1,f,c1,s,d,c2,flt,ra,smb,a2,slth,sltl,scl,sda) \
+    {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, scl, sda, I2C_PULLUP_EXT, 100000, \
+     I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0, {} }
 
 struct i2cStruct i2c_t3::i2cData[] =
 {
-    I2C_STRUCT(&I2C0_A1, &I2C0_F, &I2C0_C1, &I2C0_S, &I2C0_D, &I2C0_C2, &I2C0_FLT, &I2C0_RA, &I2C0_SMB, &I2C0_A2, &I2C0_SLTH, &I2C0_SLTL, I2C_PINS_18_19)
+    I2C_STRUCT(&I2C0_A1, &I2C0_F, &I2C0_C1, &I2C0_S, &I2C0_D, &I2C0_C2, &I2C0_FLT, &I2C0_RA, &I2C0_SMB, &I2C0_A2, &I2C0_SLTH, &I2C0_SLTL, 19, 18)
 #if (I2C_BUS_NUM >= 2) && defined(__MK20DX256__) // 3.1/3.2
-   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, I2C_PINS_29_30)
+   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, 29, 30)
 #elif (I2C_BUS_NUM >= 2) && defined(__MKL26Z64__) // LC
-   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, I2C_PINS_22_23)
+   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, 22, 23)
 #elif (I2C_BUS_NUM >= 2) && (defined(__MK64FX512__) || defined(__MK66FX1M0__))  // 3.5/3.6
-   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, I2C_PINS_37_38)
+   ,I2C_STRUCT(&I2C1_A1, &I2C1_F, &I2C1_C1, &I2C1_S, &I2C1_D, &I2C1_C2, &I2C1_FLT, &I2C1_RA, &I2C1_SMB, &I2C1_A2, &I2C1_SLTH, &I2C1_SLTL, 37, 38)
 #endif
 #if (I2C_BUS_NUM >= 3) && (defined(__MK64FX512__) || defined(__MK66FX1M0__))  // 3.5/3.6
-   ,I2C_STRUCT(&I2C2_A1, &I2C2_F, &I2C2_C1, &I2C2_S, &I2C2_D, &I2C2_C2, &I2C2_FLT, &I2C2_RA, &I2C2_SMB, &I2C2_A2, &I2C2_SLTH, &I2C2_SLTL, I2C_PINS_3_4)
+   ,I2C_STRUCT(&I2C2_A1, &I2C2_F, &I2C2_C1, &I2C2_S, &I2C2_D, &I2C2_C2, &I2C2_FLT, &I2C2_RA, &I2C2_SMB, &I2C2_A2, &I2C2_SLTH, &I2C2_SLTL, 3, 4)
 #endif
 #if (I2C_BUS_NUM >= 4) && defined(__MK66FX1M0__) // 3.6
-   ,I2C_STRUCT(&I2C3_A1, &I2C3_F, &I2C3_C1, &I2C3_S, &I2C3_D, &I2C3_C2, &I2C3_FLT, &I2C3_RA, &I2C3_SMB, &I2C3_A2, &I2C3_SLTH, &I2C3_SLTL, I2C_PINS_56_57)
+   ,I2C_STRUCT(&I2C3_A1, &I2C3_F, &I2C3_C1, &I2C3_S, &I2C3_D, &I2C3_C2, &I2C3_FLT, &I2C3_RA, &I2C3_SMB, &I2C3_A2, &I2C3_SLTH, &I2C3_SLTL, 57, 56)
 #endif
 };
 
@@ -74,11 +74,12 @@ i2c_t3::~i2c_t3()
 // ------------------------------------------------------------------------------------------------------
 // Initialize I2C - initializes I2C as Master or address range Slave
 // return: none
-// parameters:
+// parameters (optional parameters marked '^'):
 //      mode = I2C_MASTER, I2C_SLAVE
-//      address1 = 1st 7bit address for specifying Slave address range (ignored for Master mode)
-//      address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
-//      pins = pins to use, options are:
+//      address1 = 7bit slave address when configured as Slave (ignored for Master mode)
+//    ^ address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
+//    ^ pins = pins to use, can be specified as 'i2c_pins' enum,
+//             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
 //          Interface  Devices     Pin Name      SCL    SDA
 //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
 //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
@@ -92,17 +93,17 @@ i2c_t3::~i2c_t3()
 //            Wire1    3.5/3.6  I2C_PINS_37_38    37     38
 //            Wire2    3.5/3.6  I2C_PINS_3_4       3      4
 //            Wire3      3.6    I2C_PINS_56_57    57     56  *
-//      pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
-//      rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
+//    ^ pullup = I2C_PULLUP_EXT, I2C_PULLUP_INT
+//    ^ rate = I2C frequency to use, can be specified directly in Hz, eg. 400000 for 400kHz, or using one of the
 //             following enum values (deprecated):
 //             I2C_RATE_100, I2C_RATE_200, I2C_RATE_300, I2C_RATE_400,
 //             I2C_RATE_600, I2C_RATE_800, I2C_RATE_1000, I2C_RATE_1200,
 //             I2C_RATE_1500, I2C_RATE_1800, I2C_RATE_2000, I2C_RATE_2400,
 //             I2C_RATE_2800, I2C_RATE_3000
-//      opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
+//    ^ opMode = I2C_OP_MODE_IMM, I2C_OP_MODE_ISR, I2C_OP_MODE_DMA (ignored for Slave mode, defaults to ISR)
 //
 void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t address1, uint8_t address2,
-                    i2c_pins pins, i2c_pullup pullup, uint32_t rate, i2c_op_mode opMode)
+                    uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, uint32_t rate, i2c_op_mode opMode)
 {
     // Enable I2C internal clock
     if(bus == 0)
@@ -123,12 +124,12 @@ void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t a
     i2c->currentMode = mode; // Set mode
     i2c->currentStatus = I2C_WAITING; // reset status
 
-    // Set Master/Slave address (zeroed in Master to prevent accidental Rx when setup is changed dynamically)
+    // Set Master/Slave address
     if(i2c->currentMode == I2C_MASTER)
     {
         *(i2c->C2) = I2C_C2_HDRS; // Set high drive select
-        *(i2c->A1) = 0;
-        *(i2c->RA) = 0;
+        //*(i2c->A1) = 0;
+        //*(i2c->RA) = 0;
     }
     else
     {
@@ -142,10 +143,12 @@ void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t a
     }
 
     // Setup pins and options (note: does not "unset" unused pins if changed).  As noted in
-    // original TwoWire.cpp, internal 3.0/3.1 pullup is strong (about 190 ohms), but it can
+    // original TwoWire.cpp, internal 3.0/3.1/3.2 pullup is strong (about 190 ohms), but it can
     // work if other devices on bus have strong enough pulldown devices (usually true).
     //
-    pinConfigure_(i2c, bus, pins, pullup, 0);
+    if(!pinSCL) pinSCL = i2c->currentSCL; // if either pin specified as 0, then use current settings
+    if(!pinSDA) pinSDA = i2c->currentSDA;
+    pinConfigure_(i2c, bus, pinSCL, pinSDA, pullup, 0);
 
     // Set I2C rate
     #if defined(__MKL26Z64__) // LC
@@ -166,34 +169,19 @@ void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t a
 }
 
 
-// Get Default Pins - this obtains the default pins to use when using simplified begin() calls,
-//                    intended for internal use only
-// return: i2c_pins - default pin setting:
-//                    Wire:  I2C_PINS_18_19
-//                    Wire1: I2C_PINS_29_30 (3.1/3.2), I2C_PINS_22_23 (LC), I2C_PINS_37_38 (3.5/3.6)
-//                    Wire2: I2C_PINS_3_4   (3.5/3.6)
-//                    Wire3: I2C_PINS_56_57 (3.6)
+// ------------------------------------------------------------------------------------------------------
+// Valid pin checks - verify if SCL or SDA pin is valid on given bus, intended for internal use only
+// return: alt setting, 0=not valid
+// parameters:
+//      bus = bus number
+//      pin = pin number to check
+//      offset = array offset
 //
-i2c_pins i2c_t3::getDefaultPins_(uint8_t bus)
+uint8_t i2c_t3::validPin_(uint8_t bus, uint8_t pin, uint8_t offset)
 {
-    i2c_pins defpins = I2C_PINS_18_19;
-    #if defined(__MKL26Z64__)
-        defpins = (bus == 1) ? I2C_PINS_22_23 : I2C_PINS_18_19; // LC
-    #elif defined(__MK20DX128__)
-        defpins = I2C_PINS_18_19; // 3.0
-    #elif defined(__MK20DX256__)
-        defpins = (bus == 1) ? I2C_PINS_29_30 : I2C_PINS_18_19; // 3.1/3.2
-    #elif defined(__MK64FX512__)
-        defpins = (bus == 2) ? I2C_PINS_3_4   :
-                  (bus == 1) ? I2C_PINS_37_38 :
-                               I2C_PINS_18_19; // 3.5
-    #elif defined(__MK66FX1M0__)
-        defpins = (bus == 3) ? I2C_PINS_56_57 :
-                  (bus == 2) ? I2C_PINS_3_4   :
-                  (bus == 1) ? I2C_PINS_37_38 :
-                               I2C_PINS_18_19; // 3.6
-    #endif
-    return defpins;
+    for(uint8_t idx=0; idx < I2C_PINS_COUNT-1; idx++)
+        if(i2c_valid_pins[idx*4] == bus && i2c_valid_pins[idx*4+offset] == pin) return i2c_valid_pins[idx*4+3];
+    return 0;
 }
 
 
@@ -375,7 +363,8 @@ void i2c_t3::setRate_(struct i2cStruct* i2c, uint32_t busFreq, uint32_t i2cFreq)
 //                      set then inactive pins will switch to input mode using same pullup configuration.
 // return: 1=success, 0=fail (bus busy or incompatible pins)
 // parameters:
-//      pins = pins to use, options are:
+//      pins = pins to use, can be specified as 'i2c_pins' enum,
+//             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
 //          Interface  Devices     Pin Name      SCL    SDA
 //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
 //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
@@ -395,248 +384,43 @@ void i2c_t3::setRate_(struct i2cStruct* i2c, uint32_t busFreq, uint32_t i2cFreq)
 #define PIN_CONFIG_ALT(name,alt) uint32_t name = (pullup == I2C_PULLUP_EXT) ? (PORT_PCR_MUX(alt)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE) \
                                                                             : (PORT_PCR_MUX(alt)|PORT_PCR_PE|PORT_PCR_PS)
 
-uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, i2c_pins pins, i2c_pullup pullup, uint8_t reconfig)
+uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, uint8_t reconfig)
 {
-    uint8_t retval = 0;
+    uint8_t validAlt, retval=0;
+    volatile uint32_t* pcr;
 
-    if(reconfig && (*(i2c->S) & I2C_S_BUSY)) return 0; // if reconfig return immediately if bus busy (otherwise assume initial setup)
+    if(reconfig && (*(i2c->S) & I2C_S_BUSY)) return 0; // if reconfig return immediately if bus busy (reconfig=0 for init)
 
-    // Create config settings
+    // Verify new SCL pin is different and valid, or reconfig=0 (re-init)
     //
-    PIN_CONFIG_ALT(pinConfigAlt2,2);
-    #if defined(__MK20DX256__) // 3.1/3.2
-        PIN_CONFIG_ALT(pinConfigAlt6,6);
-    #endif
-    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-        PIN_CONFIG_ALT(pinConfigAlt5,5);
-        PIN_CONFIG_ALT(pinConfigAlt7,7);
-    #endif
-
-    // Verify new pin setting is valid
-    //
-    if(bus == 0)
+    validAlt = validPin_(bus, pinSCL, 1);
+    if((pinSCL != i2c->currentSCL && validAlt) || !reconfig)
     {
-        switch(pins)
-        {
-        case I2C_PINS_16_17: retval = 1; break;
-        case I2C_PINS_18_19: retval = 1; break;
-        #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-        case I2C_PINS_7_8:   retval = 1; break;
-        case I2C_PINS_33_34: retval = 1; break;
-        case I2C_PINS_47_48: retval = 1; break;
-        #endif
-        default: break;
-        }
-    }
-    #if I2C_BUS_NUM >= 2
-        if(bus == 1)
-        {
-            switch(pins)
-            {
-            #if defined(__MKL26Z64__) // LC
-            case I2C_PINS_22_23: retval = 1; break;
-            #endif
-            #if defined(__MK20DX256__) // 3.1/3.2
-            case I2C_PINS_26_31: retval = 1; break;
-            case I2C_PINS_29_30: retval = 1; break;
-            #endif
-            #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-            case I2C_PINS_37_38: retval = 1; break;
-            #endif
-            default: break;
-            }
-        }
-    #endif
-    #if I2C_BUS_NUM >= 3
-        if(bus == 2)
-        {
-            switch(pins)
-            {
-            #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-            case I2C_PINS_3_4: retval = 1; break;
-            #endif
-            default: break;
-            }
-        }
-    #endif
-    #if I2C_BUS_NUM >= 4
-        if(bus == 3)
-        {
-            switch(pins)
-            {
-            #if defined(__MK66FX1M0__) // 3.6
-            case I2C_PINS_56_57: retval = 1; break;
-            #endif
-            default: break;
-            }
-        }
-    #endif
-
-    // If compatible pin setting found then reconfig (break-before-make) and update.
-    //
-    // If pins are given an impossible value (eg. I2C0 with I2C_PINS_26_31) then the function will return fail,
-    // and there will be no change to the configuration.
-    //
-    if(retval)
-    {
-        // If reconfig set, switch previous pins to non-I2C
-        if(reconfig)
-        {
-            uint8_t old_mode = (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP;
-            switch(i2c->currentPins)
-            {
-            case I2C_PINS_16_17:
-                pinMode(17,old_mode);
-                pinMode(16,old_mode);
-                break;
-            case I2C_PINS_18_19:
-                pinMode(18,old_mode);
-                pinMode(19,old_mode);
-                break;
-            #if defined(__MKL26Z64__) // LC
-            case I2C_PINS_22_23:
-                pinMode(23,old_mode);
-                pinMode(22,old_mode);
-                break;
-            #endif
-            #if defined(__MK20DX256__) // 3.1/3.2
-            case I2C_PINS_29_30:
-                pinMode(30,old_mode);
-                pinMode(29,old_mode);
-                break;
-            case I2C_PINS_26_31:
-                pinMode(31,old_mode);
-                pinMode(26,old_mode);
-                break;
-            #endif
-            #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-            case I2C_PINS_3_4:
-                pinMode(4,old_mode);
-                pinMode(3,old_mode);
-                break;
-            case I2C_PINS_7_8:
-                pinMode(8,old_mode);
-                pinMode(7,old_mode);
-                break;
-            case I2C_PINS_33_34:
-                pinMode(34,old_mode);
-                pinMode(33,old_mode);
-                break;
-            case I2C_PINS_37_38:
-                pinMode(38,old_mode);
-                pinMode(37,old_mode);
-                break;
-            case I2C_PINS_47_48:
-                pinMode(48,old_mode);
-                pinMode(47,old_mode);
-                break;
-            #endif
-            #if defined(__MK66FX1M0__) // 3.6
-            case I2C_PINS_56_57:
-                pinMode(56,old_mode);
-                pinMode(57,old_mode);
-                break;
-            #endif
-            default: break;
-            }
-        }
-
-        // Configure new pins
-        //
-        if(bus == 0)
-        {
-            switch(pins)
-            {
-            case I2C_PINS_16_17:
-                CORE_PIN17_CONFIG = pinConfigAlt2;
-                CORE_PIN16_CONFIG = pinConfigAlt2;
-                break;
-            case I2C_PINS_18_19:
-                CORE_PIN18_CONFIG = pinConfigAlt2;
-                CORE_PIN19_CONFIG = pinConfigAlt2;
-                break;
-            #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-            case I2C_PINS_7_8:
-                CORE_PIN8_CONFIG = pinConfigAlt7;
-                CORE_PIN7_CONFIG = pinConfigAlt7;
-                break;
-            case I2C_PINS_33_34:
-                CORE_PIN34_CONFIG = pinConfigAlt5;
-                CORE_PIN33_CONFIG = pinConfigAlt5;
-                break;
-            case I2C_PINS_47_48:
-                CORE_PIN48_CONFIG = pinConfigAlt2;
-                CORE_PIN47_CONFIG = pinConfigAlt2;
-                break;
-            #endif
-            default: break;
-            }
-        }
-        #if I2C_BUS_NUM >= 2
-            if(bus == 1)
-            {
-                switch(pins)
-                {
-                #if defined(__MKL26Z64__) // LC
-                case I2C_PINS_22_23:
-                    CORE_PIN23_CONFIG = pinConfigAlt2;
-                    CORE_PIN22_CONFIG = pinConfigAlt2;
-                    break;
-                #endif
-                #if defined(__MK20DX256__) // 3.1/3.2
-                case I2C_PINS_26_31:
-                    CORE_PIN31_CONFIG = pinConfigAlt6;
-                    CORE_PIN26_CONFIG = pinConfigAlt6;
-                    break;
-                case I2C_PINS_29_30:
-                    CORE_PIN30_CONFIG = pinConfigAlt2;
-                    CORE_PIN29_CONFIG = pinConfigAlt2;
-                    break;
-                #endif
-                #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-                case I2C_PINS_37_38:
-                    CORE_PIN38_CONFIG = pinConfigAlt2;
-                    CORE_PIN37_CONFIG = pinConfigAlt2;
-                    break;
-                #endif
-                default: break;
-                }
-            }
-        #endif
-        #if I2C_BUS_NUM >= 3
-            if(bus == 2)
-            {
-                switch(pins)
-                {
-                #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-                case I2C_PINS_3_4:
-                    CORE_PIN4_CONFIG = pinConfigAlt5;
-                    CORE_PIN3_CONFIG = pinConfigAlt5;
-                    break;
-                #endif
-                default: break;
-                }
-            }
-        #endif
-        #if I2C_BUS_NUM >= 4
-            if(bus == 3)
-            {
-                switch(pins)
-                {
-                #if defined(__MK66FX1M0__) // 3.6
-                case I2C_PINS_56_57:
-                    CORE_PIN56_CONFIG = pinConfigAlt2;
-                    CORE_PIN57_CONFIG = pinConfigAlt2;
-                    break;
-                #endif
-                default: break;
-                }
-            }
-        #endif
-
-        // Update settings
-        i2c->currentPins = pins;
+        // If reconfig set, switch previous pin to non-I2C input
+        if(reconfig) pinMode(i2c->currentSCL, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
+        // Config new pin
+        PIN_CONFIG_ALT(configSCL, validAlt);
+        pcr = portConfigRegister(pinSCL);
+        *pcr = configSCL;
+        i2c->currentSCL = pinSCL;
         i2c->currentPullup = pullup;
+        retval = 1;
+    }
+
+    // Verify new SDA pin is different and valid (not necessarily same Alt as SCL), or reconfig=0 (re-init)
+    //
+    validAlt = validPin_(bus, pinSDA, 2);
+    if((pinSDA != i2c->currentSDA && validAlt) || !reconfig)
+    {
+        // If reconfig set, switch previous pin to non-I2C input
+        if(reconfig) pinMode(i2c->currentSDA, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
+        // Config new pin
+        PIN_CONFIG_ALT(configSDA, validAlt);
+        pcr = portConfigRegister(pinSDA);
+        *pcr = configSDA;
+        i2c->currentSDA = pinSDA;
+        i2c->currentPullup = pullup;
+        retval = 1;
     }
 
     return retval;
@@ -686,6 +470,7 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
             if(!(*(i2c->C1) & I2C_C1_MST))
             {
                 resetBus_(i2c,bus);
+                I2C_ERR_INC(I2C_ERRCNT_RESET_BUS);
                 if(!(*(i2c->S) & I2C_S_BUSY))
                 {
                     // become the bus master in transmit mode (send start)
@@ -697,7 +482,9 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
         // check if not master
         if(!(*(i2c->C1) & I2C_C1_MST))
         {
-            i2c->currentStatus = I2C_TIMEOUT; // bus not acquired, mark as timeout
+            i2c->currentStatus = I2C_NOT_ACQ; // bus not acquired
+            I2C_ERR_INC(I2C_ERRCNT_NOT_ACQ);
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if cannot acquire bus
             return 0;
         }
     }
@@ -756,60 +543,34 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
 //
 void i2c_t3::resetBus_(struct i2cStruct* i2c, uint8_t bus)
 {
-    uint8_t scl=0, sda=0, count=0;
+    uint8_t scl = i2c->currentSCL;
+    uint8_t sda = i2c->currentSDA;
 
-    switch(i2c->currentPins)
+    // change pin mux to digital I/O
+    pinMode(sda,((i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP));
+    digitalWrite(scl,HIGH);
+    pinMode(scl,OUTPUT);
+
+    for(uint8_t count=0; digitalRead(sda) == 0 && count < 9; count++)
     {
-    case I2C_PINS_16_17: sda = 17; scl = 16; break;
-    case I2C_PINS_18_19: sda = 18; scl = 19; break;
-    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-    case I2C_PINS_7_8:   sda =  8; scl =  7; break;
-    case I2C_PINS_33_34: sda = 34; scl = 33; break;
-    case I2C_PINS_47_48: sda = 48; scl = 47; break;
-    #endif
-    #if defined(__MKL26Z64__) // LC
-    case I2C_PINS_22_23: sda = 23; scl = 22; break;
-    #endif
-    #if defined(__MK20DX256__) // 3.1/3.2
-    case I2C_PINS_29_30: sda = 30; scl = 29; break;
-    case I2C_PINS_26_31: sda = 31; scl = 26; break;
-    #endif
-    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-    case I2C_PINS_37_38: sda = 38; scl = 37; break;
-    case I2C_PINS_3_4:   sda =  4; scl =  3; break;
-    #endif
-    #if defined(__MK66FX1M0__) // 3.6
-    case I2C_PINS_56_57: sda = 56; scl = 57; break;
-    #endif
-    }
-    if(sda && scl)
-    {
-        // change pin mux to digital I/O
-        pinMode(sda,((i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP));
+        digitalWrite(scl,LOW);
+        delayMicroseconds(5);       // 10us period == 100kHz
         digitalWrite(scl,HIGH);
-        pinMode(scl,OUTPUT);
-
-        while(digitalRead(sda) == 0 && count++ < 10)
-        {
-            digitalWrite(scl,LOW);
-            delayMicroseconds(5);       // 10us period == 100kHz
-            digitalWrite(scl,HIGH);
-            delayMicroseconds(5);
-        }
-
-        // reconfigure pins for I2C
-        pinConfigure_(i2c, bus, i2c->currentPins, i2c->currentPullup, 0);
-
-        // reset config and status
-        if(*(i2c->S) & 0x7F) // reset config if any residual status bits are set
-        {
-            *(i2c->C1) = 0x00; // disable I2C, intr disabled
-            delayMicroseconds(5);
-            *(i2c->C1) = I2C_C1_IICEN; // enable I2C, intr disabled, Rx mode
-            delayMicroseconds(5);
-        }
-        i2c->currentStatus = I2C_WAITING;
+        delayMicroseconds(5);
     }
+
+    // reconfigure pins for I2C
+    pinConfigure_(i2c, bus, scl, sda, i2c->currentPullup, 0);
+
+    // reset config and status
+    if(*(i2c->S) & 0x7F) // reset config if any residual status bits are set
+    {
+        *(i2c->C1) = 0x00; // disable I2C, intr disabled
+        delayMicroseconds(5);
+        *(i2c->C1) = I2C_C1_IICEN; // enable I2C, intr disabled, Rx mode
+        delayMicroseconds(5);
+    }
+    i2c->currentStatus = I2C_WAITING;
 }
 
 
@@ -890,7 +651,12 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
         {
             // send data, wait for done
             *(i2c->D) = i2c->txBuffer[idx];
-            i2c_wait_(i2c);
+
+            // wait for byte
+            while(!(*(i2c->S) & I2C_S_IICIF) && (timeout == 0 || deltaT < timeout));
+            *(i2c->S) = I2C_S_IICIF;
+            if(timeout && deltaT >= timeout) break;
+
             status = *(i2c->S);
 
             // check arbitration
@@ -901,31 +667,47 @@ void i2c_t3::sendTransmission_(struct i2cStruct* i2c, uint8_t bus, i2c_stop send
                 // TODO: this is clearly not right, after ARBL it should drop into IMM slave mode if IAAS=1
                 //       Right now Rx message would be ignored regardless of IAAS
                 *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
+                I2C_ERR_INC(I2C_ERRCNT_ARBL);
+                if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                 return;
             }
             // check if slave ACK'd
             else if(status & I2C_S_RXAK)
             {
                 if(idx == 0)
+                {
                     i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
+                    I2C_ERR_INC(I2C_ERRCNT_ADDR_NAK);
+                }
                 else
+                {
                     i2c->currentStatus = I2C_DATA_NAK; // NAK on Data
+                    I2C_ERR_INC(I2C_ERRCNT_DATA_NAK);
+                }
                 *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
+                if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
                 return;
             }
         }
-
-        // Set final status
-        if(idx < i2c->txBufferLength)
-            i2c->currentStatus = I2C_TIMEOUT; // Tx incomplete, mark as timeout
-        else
-            i2c->currentStatus = I2C_WAITING; // Tx complete, change to waiting state
 
         // send STOP if configured
         if(i2c->currentStop == I2C_STOP)
             *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
         else
             *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX; // no STOP, stay in Tx mode, intr disabled
+
+        // Set final status
+        if(idx < i2c->txBufferLength)
+        {
+            i2c->currentStatus = I2C_TIMEOUT; // Tx incomplete, mark as timeout
+            I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+        }
+        else
+        {
+            i2c->currentStatus = I2C_WAITING; // Tx complete, change to waiting state
+            if(i2c->user_onTransmitDone != nullptr) i2c->user_onTransmitDone(); // Call Master Tx complete callback
+        }
     }
     //
     // ISR/DMA mode - non-blocking
@@ -1022,7 +804,19 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
 
         // Send target address
         *(i2c->D) = (addr << 1) | 1; // address + READ
-        i2c_wait_(i2c);
+
+        // wait for byte
+        while(!(*(i2c->S) & I2C_S_IICIF) && (timeout == 0 || deltaT < timeout));
+        *(i2c->S) = I2C_S_IICIF;
+        if(timeout && deltaT >= timeout)
+        {
+            *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
+            i2c->currentStatus = I2C_TIMEOUT; // Rx incomplete, mark as timeout
+            I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+            return;
+        }
+
         status = *(i2c->S);
 
         // check arbitration
@@ -1033,6 +827,8 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
             // TODO: this is clearly not right, after ARBL it should drop into IMM slave mode if IAAS=1
             //       Right now Rx message would be ignored regardless of IAAS
             *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
+            I2C_ERR_INC(I2C_ERRCNT_ARBL);
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
             return;
         }
         // check if slave ACK'd
@@ -1040,6 +836,8 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
         {
             i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
             *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
+            I2C_ERR_INC(I2C_ERRCNT_ADDR_NAK);
+            if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
             return;
         }
         else
@@ -1055,7 +853,8 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
             // Master receive loop
             while(i2c->rxBufferLength < i2c->reqCount && i2c->currentStatus == I2C_RECEIVING)
             {
-                i2c_wait_(i2c);
+                while(!(*(i2c->S) & I2C_S_IICIF) && (timeout == 0 || deltaT < timeout));
+                *(i2c->S) = I2C_S_IICIF;
                 chkTimeout = (timeout != 0 && deltaT >= timeout);
                 // check if 2nd to last byte or timeout
                 if((i2c->rxBufferLength+2) == i2c->reqCount || (chkTimeout && !i2c->timeoutRxNAK))
@@ -1071,22 +870,30 @@ void i2c_t3::sendRequest_(struct i2cStruct* i2c, uint8_t bus, uint8_t addr, size
                     // grab last data
                     data = *(i2c->D);
                     i2c->rxBuffer[i2c->rxBufferLength++] = data;
-                    if(chkTimeout)
-                        i2c->currentStatus = I2C_TIMEOUT; // Rx incomplete, mark as timeout
-                    else
-                        i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
                     if(i2c->currentStop == I2C_STOP) // NAK then STOP
                     {
                         delayMicroseconds(1); // empirical patch, lets things settle before issuing STOP
                         *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                     }
                     // else NAK no STOP
+
+                    // Set final status
+                    if(chkTimeout)
+                    {
+                        i2c->currentStatus = I2C_TIMEOUT; // Rx incomplete, mark as timeout
+                        I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+                    }
+                    else
+                    {
+                        i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
+                        if(i2c->user_onReqFromDone != nullptr) i2c->user_onReqFromDone(); // Call Master Rx complete callback
+                    }
                 }
                 else
                 {
                     // grab next data, not last byte, will ACK
-                    data = *(i2c->D);
-                    i2c->rxBuffer[i2c->rxBufferLength++] = data;
+                    i2c->rxBuffer[i2c->rxBufferLength++] = *(i2c->D);
                 }
                 if(chkTimeout) i2c->timeoutRxNAK = 1; // set flag to indicate NAK sent
             }
@@ -1128,6 +935,7 @@ uint8_t i2c_t3::getError(void)
     case I2C_DATA_NAK: return 3;
     case I2C_ARB_LOST: return 4;
     case I2C_TIMEOUT:  return 4;
+    case I2C_NOT_ACQ:  return 4;
     default: break;
     }
     if(getWriteError()) return 1; // if write_error was set then flag as buffer overflow
@@ -1141,12 +949,7 @@ uint8_t i2c_t3::getError(void)
 //
 uint8_t i2c_t3::done_(struct i2cStruct* i2c)
 {
-    return (i2c->currentStatus==I2C_WAITING ||
-            i2c->currentStatus==I2C_ADDR_NAK ||
-            i2c->currentStatus==I2C_DATA_NAK ||
-            i2c->currentStatus==I2C_ARB_LOST ||
-            i2c->currentStatus==I2C_TIMEOUT ||
-            i2c->currentStatus==I2C_BUF_OVF);
+    return (i2c->currentStatus < I2C_SENDING);
 }
 
 
@@ -1177,15 +980,16 @@ uint8_t i2c_t3::finish_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout)
         i2c->currentStatus = I2C_TIMEOUT;
     }
 
-    // check exit status, if still Tx/Rx then timeout occurred
-    if(i2c->currentStatus == I2C_SENDING ||
-       i2c->currentStatus == I2C_SEND_ADDR ||
-       i2c->currentStatus == I2C_RECEIVING)
-        i2c->currentStatus = I2C_TIMEOUT; // set to timeout state
+    // check exit status, if not done then timeout occurred
+    if(!done_(i2c)) i2c->currentStatus = I2C_TIMEOUT; // set to timeout state
 
-    // delay to allow bus to settle (eg. allow STOP to complete and be recognized,
-    //                               not just on our side, but on slave side also)
+    // delay to allow bus to settle - allow Timeout or STOP to complete and be recognized.  Timeouts must
+    //                                propagate through ISR, and STOP must be recognized on both
+    //                                Master and Slave sides
     delayMicroseconds(4);
+
+    // note that onTransmitDone, onReqFromDone, onError callbacks are handled in ISR, this is done
+    // because use of this function is optional on background transfers
     if(i2c->currentStatus == I2C_WAITING) return 1;
     return 0;
 }
@@ -1372,6 +1176,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     // DMA says complete at the beginning of its last byte, need to
                     // wait until end of its last byte to re-engage ISR
                     i2c->activeDMA = I2C_DMA_LAST;
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                 }
                 else if(i2c->activeDMA == I2C_DMA_LAST)
                 {
@@ -1383,24 +1188,29 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     i2c->activeDMA = I2C_DMA_OFF;
                     i2c->txBufferIndex = i2c->txBufferLength-1;
                     *(i2c->D) = i2c->txBuffer[i2c->txBufferIndex];
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                 }
                 else if(i2c->DMA->error())
                 {
-                    i2c->DMA->clearInterrupt();
                     i2c->DMA->clearError();
+                    i2c->DMA->clearInterrupt();
                     i2c->activeDMA = I2C_DMA_OFF;
+                    i2c->currentStatus = I2C_DMA_ERR;
+                    I2C_ERR_INC(I2C_ERRCNT_DMA_ERR);
                     // check arbitration
                     if(status & I2C_S_ARBL)
                     {
                         // Arbitration Lost
                         i2c->currentStatus = I2C_ARB_LOST;
-                        *(i2c->S) = I2C_S_ARBL | I2C_S_IICIF; // clear arbl flag and intr
-                        *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?), DMA disabled
+                        I2C_ERR_INC(I2C_ERRCNT_ARBL);
+                        *(i2c->S) = I2C_S_ARBL; // clear arbl flag
                         i2c->txBufferIndex = 0; // reset Tx buffer index to prepare for resend
-                        return; // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
+                        // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
                     }
+                    *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled, DMA disabled
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
+                    if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if DMA error or ARBL
                 }
-                *(i2c->S) = I2C_S_IICIF; // clear intr
                 return;
             } // end DMA Tx
             else
@@ -1415,22 +1225,33 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         // Arbitration Lost
                         i2c->activeDMA = I2C_DMA_OFF; // clear pending DMA (if happens on address byte)
                         i2c->currentStatus = I2C_ARB_LOST;
-                        *(i2c->S) = I2C_S_ARBL | I2C_S_IICIF; // clear arbl flag and intr
+                        *(i2c->S) = I2C_S_ARBL; // clear arbl flag
                         *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
                         i2c->txBufferIndex = 0; // reset Tx buffer index to prepare for resend
-                        return; // does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read.
+                        // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read.
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
+                        I2C_ERR_INC(I2C_ERRCNT_ARBL);
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                     }
                     // check if slave ACK'd
                     else if(status & I2C_S_RXAK)
                     {
                         i2c->activeDMA = I2C_DMA_OFF; // clear pending DMA (if happens on address byte)
                         if(i2c->txBufferIndex == 0)
+                        {
                             i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
+                            I2C_ERR_INC(I2C_ERRCNT_ADDR_NAK);
+                        }
                         else
+                        {
                             i2c->currentStatus = I2C_DATA_NAK; // NAK on Data
+                            I2C_ERR_INC(I2C_ERRCNT_DATA_NAK);
+                        }
                         // send STOP, change to Rx mode, intr disabled
                         // note: Slave NAK is an error, so send STOP regardless of setting
                         *(i2c->C1) = I2C_C1_IICEN;
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
                     }
                     else
                     {
@@ -1444,6 +1265,9 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                                 *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                             else
                                 *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX; // no STOP, stay in Tx mode, intr disabled
+                            // run TransmitDone callback when done
+                            *(i2c->S) = I2C_S_IICIF; // clear intr
+                            if(i2c->user_onTransmitDone != nullptr) i2c->user_onTransmitDone();
                         }
                         else if(i2c->activeDMA == I2C_DMA_ADDR)
                         {
@@ -1452,14 +1276,15 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                             *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_MST | I2C_C1_TX | I2C_C1_DMAEN; // intr en, Tx mode, DMA en
                             i2c->DMA->enable();
                             *(i2c->D) = i2c->txBuffer[1]; // DMA will start on next request
+                            *(i2c->S) = I2C_S_IICIF; // clear intr
                         }
                         else
                         {
                             // ISR transmit next byte
                             *(i2c->D) = i2c->txBuffer[i2c->txBufferIndex];
+                            *(i2c->S) = I2C_S_IICIF; // clear intr
                         }
                     }
-                    *(i2c->S) = I2C_S_IICIF; // clear intr
                     return;
                 }
                 else if(i2c->currentStatus == I2C_SEND_ADDR)
@@ -1469,16 +1294,23 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     {
                         // Arbitration Lost
                         i2c->currentStatus = I2C_ARB_LOST;
-                        *(i2c->S) = I2C_S_ARBL | I2C_S_IICIF; // clear arbl flag and intr
+                        *(i2c->S) = I2C_S_ARBL; // clear arbl flag
                         *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled (does this send STOP if ARBL flagged?)
-                        return; // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
+                        // TODO does this need to check IAAS and drop to Slave Rx? if so set Rx + dummy read. not sure if this would work for DMA
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
+                        I2C_ERR_INC(I2C_ERRCNT_ARBL);
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if ARBL
                     }
                     else if(status & I2C_S_RXAK)
                     {
                         // Slave addr NAK
                         i2c->currentStatus = I2C_ADDR_NAK; // NAK on Addr
                         // send STOP, change to Rx mode, intr disabled
+                        // note: Slave NAK is an error, so send STOP regardless of setting
                         *(i2c->C1) = I2C_C1_IICEN;
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
+                        I2C_ERR_INC(I2C_ERRCNT_ADDR_NAK);
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if NAK
                     }
                     else if(i2c->activeDMA == I2C_DMA_ADDR)
                     {
@@ -1487,6 +1319,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_MST | I2C_C1_DMAEN; // intr en, no STOP, change to Rx, DMA en
                         i2c->DMA->enable();
                         data = *(i2c->D); // dummy read
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
                     }
                     else
                     {
@@ -1497,24 +1330,20 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         else
                             *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_MST; // no STOP, change to Rx
                         data = *(i2c->D); // dummy read
+                        *(i2c->S) = I2C_S_IICIF; // clear intr
                     }
-                    *(i2c->S) = I2C_S_IICIF; // clear intr
                     return;
                 }
                 else if(i2c->currentStatus == I2C_TIMEOUT)
                 {
                     // send STOP if configured
                     if(i2c->currentStop == I2C_STOP)
-                    {
-                        // send STOP, change to Rx mode, intr disabled
-                        *(i2c->C1) = I2C_C1_IICEN;
-                    }
+                        *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                     else
-                    {
-                        // no STOP, stay in Tx mode, intr disabled
-                        *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
-                    }
+                        *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX; // no STOP, stay in Tx mode, intr disabled
                     *(i2c->S) = I2C_S_IICIF; // clear intr
+                    I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
+                    if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
                     return;
                 }
                 else
@@ -1539,14 +1368,13 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     i2c->DMA->clearInterrupt();
                     *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_MST | I2C_C1_TXAK; // intr en, Rx mode, DMA disabled, NAK on recv
                     i2c->activeDMA = I2C_DMA_LAST;
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                 }
                 else if(i2c->activeDMA == I2C_DMA_LAST) // last byte
                 {
                     // clear DMA
                     i2c->DMA->clearComplete();
                     i2c->activeDMA = I2C_DMA_OFF;
-                    if(i2c->currentStatus != I2C_TIMEOUT)
-                        i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
                     // change to Tx mode
                     *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
                     // grab last data
@@ -1558,16 +1386,21 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                     }
                     // else NAK no STOP
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
+                    i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
+                    if(i2c->user_onReqFromDone != nullptr) i2c->user_onReqFromDone(); // Call Master Rx complete callback
                 }
                 else if(i2c->DMA->error()) // not sure what would cause this...
                 {
                     i2c->DMA->clearError();
                     i2c->DMA->clearInterrupt();
                     i2c->activeDMA = I2C_DMA_OFF;
-                    i2c->currentStatus = I2C_WAITING;
+                    i2c->currentStatus = I2C_DMA_ERR;
                     *(i2c->C1) = I2C_C1_IICEN; // change to Rx mode, intr disabled, DMA disabled
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
+                    I2C_ERR_INC(I2C_ERRCNT_DMA_ERR);
+                    if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if DMA error
                 }
-                *(i2c->S) = I2C_S_IICIF; // clear intr
                 return;
             }
             else
@@ -1581,8 +1414,6 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 if((i2c->rxBufferLength+1) >= i2c->reqCount || (i2c->currentStatus == I2C_TIMEOUT && i2c->timeoutRxNAK))
                 {
                     i2c->timeoutRxNAK = 0; // clear flag
-                    if(i2c->currentStatus != I2C_TIMEOUT)
-                        i2c->currentStatus = I2C_WAITING; // Rx complete, change to waiting state
                     // change to Tx mode
                     *(i2c->C1) = I2C_C1_IICEN | I2C_C1_MST | I2C_C1_TX;
                     // grab last data
@@ -1593,15 +1424,27 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         *(i2c->C1) = I2C_C1_IICEN; // send STOP, change to Rx mode, intr disabled
                     }
                     // else NAK no STOP
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
+                    // Rx complete
+                    if(i2c->currentStatus == I2C_TIMEOUT)
+                    {
+                        I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
+                        if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+                    }
+                    else
+                    {
+                        i2c->currentStatus = I2C_WAITING;
+                        if(i2c->user_onReqFromDone != nullptr) i2c->user_onReqFromDone(); // Call Master Rx complete callback
+                    }
                 }
                 else
                 {
                     // grab next data, not last byte, will ACK
                     i2c->rxBuffer[i2c->rxBufferLength++] = *(i2c->D);
+                    *(i2c->S) = I2C_S_IICIF; // clear intr
                 }
                 if(i2c->currentStatus == I2C_TIMEOUT && !i2c->timeoutRxNAK)
                     i2c->timeoutRxNAK = 1; // set flag to indicate NAK sent
-                *(i2c->S) = I2C_S_IICIF; // clear intr
                 return;
             }
         }
@@ -1611,6 +1454,9 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
         //
         // Slave Mode
         //
+
+        // ARBL makes no sense on Slave, but this might get set if there is a pullup problem and
+        // SCL/SDA get stuck.  This is primarily to guard against ARBL flag getting stuck.
         if(status & I2C_S_ARBL)
         {
             // Arbitration Lost
@@ -1632,6 +1478,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 i2c->rxBufferIndex = 0;
                 i2c->user_onReceive(i2c->rxBufferLength);
             }
+
             // Is Addressed As Slave
             if(status & I2C_S_SRW)
             {
@@ -1641,10 +1488,8 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 i2c->txBufferLength = 0;
                 *(i2c->C1) = I2C_C1_IICEN | I2C_C1_IICIE | I2C_C1_TX;
                 i2c->rxAddr = (*(i2c->D) >> 1); // read to get target addr
-                if(i2c->user_onRequest != nullptr)
-                    i2c->user_onRequest(); // load Tx buffer with data
-                if(i2c->txBufferLength == 0)
-                    i2c->txBuffer[0] = 0; // send 0's if buffer empty
+                if(i2c->user_onRequest != nullptr) i2c->user_onRequest(); // load Slave Tx buffer with data
+                if(i2c->txBufferLength == 0) i2c->txBuffer[0] = 0; // send 0's if buffer empty
                 *(i2c->D) = i2c->txBuffer[0]; // send first data
                 i2c->txBufferIndex = 1;
             }
@@ -1653,18 +1498,12 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 // Addressed Slave Receive
                 //
                 // setup SDA-rising ISR - required for STOP detection in Slave Rx mode for 3.0/3.1/3.2
-                #if defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1/3.2
+                #if defined(__MK20DX256__) && I2C_BUS_NUM == 2 // 3.1/3.2 (dual-bus)
                     i2c->irqCount = 0;
-                    if(i2c->currentPins == I2C_PINS_18_19)
-                        attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_16_17)
-                        attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
-                    #if I2C_BUS_NUM >= 2
-                    else if(i2c->currentPins == I2C_PINS_29_30)
-                        attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_26_31)
-                        attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
-                    #endif
+                    attachInterrupt(i2c->currentSDA, (bus == 0) ? i2c_t3::sda0_rising_isr : i2c_t3::sda1_rising_isr, RISING);
+                #elif defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1/3.2 (single-bus)
+                    i2c->irqCount = 0;
+                    attachInterrupt(i2c->currentSDA, i2c_t3::sda0_rising_isr, RISING);
                 #elif defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
                     *(i2c->FLT) |= I2C_FLT_SSIE; // enable START/STOP intr for LC/3.5/3.6
                 #endif
@@ -1712,7 +1551,8 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     *(i2c->FLT) &= ~I2C_FLT_SSIE;                   // disable STOP/START intr (will re-enable on next IAAS)
                     *(i2c->S) = I2C_S_IICIF; // clear intr
                     i2c->currentStatus = I2C_WAITING;
-                    if(i2c->user_onReceive != nullptr)
+                    // Slave Rx complete, run callback
+                    if(i2c->user_onReceive != nullptr) 
                     {
                         i2c->rxBufferIndex = 0;
                         i2c->user_onReceive(i2c->rxBufferLength);
@@ -1723,18 +1563,12 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
             // Continue Slave Receive
             //
             // setup SDA-rising ISR - required for STOP detection in Slave Rx mode for 3.0/3.1/3.2
-            #if defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1
+            #if defined(__MK20DX256__) && I2C_BUS_NUM == 2 // 3.1/3.2 (dual-bus)
                 i2c->irqCount = 0;
-                if(i2c->currentPins == I2C_PINS_18_19)
-                    attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
-                else if(i2c->currentPins == I2C_PINS_16_17)
-                    attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
-                #if I2C_BUS_NUM >= 2
-                else if(i2c->currentPins == I2C_PINS_29_30)
-                    attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
-                else if(i2c->currentPins == I2C_PINS_26_31)
-                    attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
-                #endif
+                attachInterrupt(i2c->currentSDA, (bus == 0) ? i2c_t3::sda0_rising_isr : i2c_t3::sda1_rising_isr, RISING);
+            #elif defined(__MK20DX128__) || defined(__MK20DX256__) // 3.0/3.1/3.2 (single-bus)
+                i2c->irqCount = 0;
+                attachInterrupt(i2c->currentSDA, i2c_t3::sda0_rising_isr, RISING);
             #endif
             data = *(i2c->D);
             if(i2c->rxBufferLength < I2C_RX_BUFFER_LENGTH)
@@ -1777,16 +1611,7 @@ void i2c_t3::sda_rising_isr_handler(struct i2cStruct* i2c, uint8_t bus)
     if(!(status & I2C_S_BUSY))
     {
         i2c->currentStatus = I2C_WAITING;
-        if(i2c->currentPins == I2C_PINS_18_19)
-            detachInterrupt(18);
-        else if(i2c->currentPins == I2C_PINS_16_17)
-            detachInterrupt(17);
-        #if I2C_BUS_NUM >= 2
-        else if(i2c->currentPins == I2C_PINS_29_30)
-            detachInterrupt(30);
-        else if(i2c->currentPins == I2C_PINS_26_31)
-            detachInterrupt(31);
-        #endif
+        detachInterrupt(i2c->currentSDA);
         if(i2c->user_onReceive != nullptr)
         {
             i2c->rxBufferIndex = 0;
@@ -1796,18 +1621,7 @@ void i2c_t3::sda_rising_isr_handler(struct i2cStruct* i2c, uint8_t bus)
     else
     {
         if(++(i2c->irqCount) >= 2 || !(i2c->currentMode == I2C_SLAVE))
-        {
-            if(i2c->currentPins == I2C_PINS_18_19)
-                detachInterrupt(18);
-            else if(i2c->currentPins == I2C_PINS_16_17)
-                detachInterrupt(17);
-            #if I2C_BUS_NUM >= 2
-            else if(i2c->currentPins == I2C_PINS_29_30)
-                detachInterrupt(30);
-            else if(i2c->currentPins == I2C_PINS_26_31)
-                detachInterrupt(31);
-            #endif
-        }
+            detachInterrupt(i2c->currentSDA);
     }
 }
 #endif // sda_rising_isr
@@ -1832,6 +1646,33 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
    ------------------------------------------------------------------------------------------------------
    Changelog
    ------------------------------------------------------------------------------------------------------
+
+    - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
+        - Default assignments have been added to many functions for pins/pullup/rate/op_mode, so
+          all those parameters are now optional in many function calls (marked ^ below)
+        - Unbound SCL/SDA pin assignment.  Pins can be specified with either i2c_pins enum or by direct
+          SCL,SDA pin definition (using any valid SCL and SDA pin).  New function summary is:
+            - begin(mode, address1, ^i2c_pins, ^i2c_pullup, ^rate, ^i2c_op_mode)
+            - begin(mode, address1, ^pinSCL, ^pinSDA, ^i2c_pullup, ^rate, ^i2c_op_mode)
+            - pinConfigure(i2c_pins, ^pullup)
+            - pinConfigure(pinSCL, pinSDA, ^pullup)
+            - setSCL(pin)
+            - setSDA(pin)
+            - getSCL()
+            - getSDA()
+          Note: internal to i2c structure, currentPins has been replaced by currentSCL and currentSDA
+        - Added Master callback functions for completion of transfers.  Primarily for
+          sendTransmission/sendRequest, but these will also work on foreground commands
+          endTransmission/requestFrom.  Also added an Error callback for Master bus errors.
+            - onTransmitDone(function) - where function() is called when Master Transmit is complete
+            - onReqFromDone(function) - where function() is called when Master Receive is complete
+            - onError(function) - where function() is called upon any I2C error which terminates the
+                                  Master bus operation (eg. NAK, timeout, acquire fail, etc)
+        - Fixed blocking conditions that could occur in immediate mode
+        - Added error counters which may be optionally enabled via I2C_ERROR_COUNTERS define.  When
+          enabled it will track (Master mode only): Reset Bus (auto-retry only), Timeout, Addr NAK,
+          Data NAK, Arb Lost, Bus Not Acquired, DMA Errors.
+            - i2c_err_count enum, getErrorCount(), and zeroErrorCount() functions added
 
     - (v9.4) Modified 01Oct17 by Brian (nox771 at gmail.com)
         - Fixed Slave ISR for LC/3.5/3.6 not properly recognizing RepSTART
@@ -1876,25 +1717,32 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
         - added support for F_BUS frequencies: 60MHz, 56MHz, 48MHz, 36MHz, 24MHz, 16MHz, 8MHz, 4MHz, 2MHz
         - added new rates: I2C_RATE_1800, I2C_RATE_2800, I2C_RATE_3000
         - added new priority escalation - in cases where I2C ISR is blocked by having a lower priority than
-                                          calling function, the I2C will either adjust I2C ISR to a higher priority,
-                                          or switch to Immediate mode as needed.
+                                          calling function, the I2C will either adjust I2C ISR to a higher
+                                          priority, or switch to Immediate mode as needed.
         - added new operating mode control - I2C can be set to operate in ISR mode, DMA mode (Master only),
                                              or Immediate Mode (Master only)
         - added new begin() functions to allow setting the initial operating mode:
-            - begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
-            - begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup, i2c_rate rate, i2c_op_mode opMode)
+            - begin(i2c_mode mode, uint8_t address, i2c_pins pins, i2c_pullup pullup, i2c_rate rate,
+                    i2c_op_mode opMode)
+            - begin(i2c_mode mode, uint8_t address1, uint8_t address2, i2c_pins pins, i2c_pullup pullup,
+                    i2c_rate rate, i2c_op_mode opMode)
         - added new functions:
-            - uint8_t setOpMode(i2c_op_mode opMode) - used to change operating mode on the fly (only when bus is idle)
-            - void sendTransmission() - non-blocking Tx with implicit I2C_STOP, added for symmetry with endTransmission()
-            - uint8_t setRate(uint32_t busFreq, i2c_rate rate) - used to set I2C clock dividers to get desired rate, i2c_rate argument
-            - uint8_t setRate(uint32_t busFreq, uint32_t i2cFreq) - used to set I2C clock dividers to get desired SCL freq, uint32_t argument
+            - uint8_t setOpMode(i2c_op_mode opMode) - used to change operating mode on the fly
+                                                      (only when bus is idle)
+            - void sendTransmission() - non-blocking Tx with implicit I2C_STOP, added for symmetry
+                                        with endTransmission()
+            - uint8_t setRate(uint32_t busFreq, i2c_rate rate) - used to set I2C clock dividers to get
+                                                                 desired rate, i2c_rate argument
+            - uint8_t setRate(uint32_t busFreq, uint32_t i2cFreq) - used to set I2C clock dividers to get
+                                                                    desired SCL freq, uint32_t argument
                                                                     (quantized to nearest i2c_rate)
         - added new Wire compatibility functions:
             - void setClock(uint32_t i2cFreq) - (note: degenerate form of setRate() with busFreq == F_BUS)
             - uint8_t endTransmission(uint8_t sendStop)
             - uint8_t requestFrom(uint8_t addr, uint8_t len)
             - uint8_t requestFrom(uint8_t addr, uint8_t len, uint8_t sendStop)
-        - fixed bug in Slave Range code whereby onRequest() callback occurred prior to updating rxAddr instead of after
+        - fixed bug in Slave Range code whereby onRequest() callback occurred prior to updating rxAddr
+          instead of after
         - fixed bug in arbitration, was missing from Master Tx mode
         - removed I2C1 defines (now included in kinetis.h)
         - removed all debug code (eliminates rbuf dependency)

@@ -12,7 +12,7 @@
 // Wire1 bus is intended to pair with a Master device running the basic_master sketch.
 // Wire bus is intended to pair with a Slave device running the basic_slave sketch.
 //
-// This code is setup for a Teensy 3.6 device.
+// This code is setup for a Teensy 3.5/3.6 device.
 //
 // This example code is in the public domain.
 //
@@ -41,7 +41,7 @@ void setup()
     Wire.setDefaultTimeout(200000); // 200ms
 
     // Setup for Slave mode, address 0x66, pins 37/38, external pullups, 400kHz
-    Wire1.begin(I2C_SLAVE, 0x66, I2C_PINS_37_38, I2C_PULLUP_EXT, 400000);
+    Wire1.begin(I2C_SLAVE, 0x66, I2C_PINS_37_38, I2C_PULLUP_EXT, 400000);   // 3.5/3.6
 
     // Data init
     received = 0;

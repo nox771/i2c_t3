@@ -121,7 +121,7 @@ void scan_bus(i2c_t3& Wire, uint8_t all)
     if(Wire.bus == 0)
         Serial.print("Starting scan: Wire\n");
     else
-        Serial.printf("Starting scan: Wire%d\n",Wire.bus+1);
+        Serial.printf("Starting scan: Wire%d\n",Wire.bus);
     
     digitalWrite(LED_BUILTIN,HIGH); // LED on
     for(target = TARGET_START; target <= TARGET_END; target++) // sweep addr, skip general call
@@ -144,34 +144,13 @@ void print_bus_status(i2c_t3& Wire)
     if(Wire.bus == 0)
         Serial.print("Wire   ");
     else
-        Serial.printf("Wire%d  ",Wire.bus+1);
+        Serial.printf("Wire%d  ",Wire.bus);
     switch(i2c->currentMode)
     {
     case I2C_MASTER: Serial.print("MASTER  "); break;
     case I2C_SLAVE:  Serial.print(" SLAVE  "); break;
     }
-    switch(i2c->currentPins)
-    {
-    case I2C_PINS_18_19: Serial.print(" 19   18  "); break;
-    case I2C_PINS_16_17: Serial.print(" 16   17  "); break;
-    #if defined(__MKL26Z64__)  // LC
-    case I2C_PINS_22_23: Serial.print(" 22   23  "); break;
-    #endif
-    #if defined(__MK20DX256__)  // 3.1/3.2 
-    case I2C_PINS_29_30: Serial.print(" 29   30  "); break;
-    case I2C_PINS_26_31: Serial.print(" 26   31  "); break;
-    #endif
-    #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  // 3.5/3.6
-    case I2C_PINS_3_4:   Serial.print("  3    4  "); break;
-    case I2C_PINS_7_8:   Serial.print("  7    8  "); break;
-    case I2C_PINS_33_34: Serial.print(" 33   34  "); break;
-    case I2C_PINS_37_38: Serial.print(" 37   38  "); break;
-    case I2C_PINS_47_48: Serial.print(" 47   48  "); break;
-    #endif
-    #if defined(__MK66FX1M0__)  // 3.6
-    case I2C_PINS_56_57: Serial.print(" 57   56  "); break;
-    #endif
-    }
+    Serial.printf(" %2d   %2d  ", Wire.i2c->currentSCL, Wire.i2c->currentSDA);
     switch(i2c->currentPullup)
     {
     case I2C_PULLUP_EXT: Serial.print("External  "); break;
