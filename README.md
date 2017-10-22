@@ -39,7 +39,7 @@ Wire.begin(I2C_MASTER, 0x00, 19, 18); // equivalent to above, will default to ex
 Wire.begin(I2C_MASTER, 0x00, 16, 18); // similar to above, but using SCL pin 16 and SDA pin 18
 ```
 
-The mapping of device types, available pins, and interfaces is as follows:
+The mapping of device types, available pins, and interfaces is as follows.  Note that these are not physical pin numbers, they refer to the Teensy pin assignments, which can be viewed here: https://www.pjrc.com/teensy/pinout.html
 ```
 Interface  Devices     Pin Name      SCL    SDA   Default
 ---------  -------  --------------  -----  -----  -------  
