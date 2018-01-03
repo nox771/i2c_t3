@@ -102,13 +102,24 @@
 //#define I2C_AUTO_RETRY
 
 // ------------------------------------------------------------------------------------------------------
-// Error counters - uncomment to make the library track error counts.  Error counts can be retrieved or 
-//                  zeroed using the getErrorCount() and zeroErrorCount() functions respectively.  
-//                  When included, errors will be tracked on the following (Master-mode only):  
-//                  Reset Bus (auto-retry only), Timeout, Addr NAK, Data NAK, Arb Lost, Bus Not Acquired, 
+// Error counters - uncomment to make the library track error counts.  Error counts can be retrieved or
+//                  zeroed using the getErrorCount() and zeroErrorCount() functions respectively.
+//                  When included, errors will be tracked on the following (Master-mode only):
+//                  Reset Bus (auto-retry only), Timeout, Addr NAK, Data NAK, Arb Lost, Bus Not Acquired,
 //                  DMA Errors
 //
 #define I2C_ERROR_COUNTERS
+
+// ------------------------------------------------------------------------------------------------------
+// Disable priority check - uncomment this to entirely disable auto priority escalation.  Normally
+//                          priority escalation occurs to insure I2C ISR operates at a higher priority
+//                          than the calling function (to prevent ISR stall if the calling function
+//                          blocks).  Uncommenting this will disable the check and cause I2C ISR to
+//                          remain at default priority.  It is recommended to disable this check and
+//                          manually set ISR priority levels when using complex configurations.
+//
+//#define I2C_DISABLE_PRIORITY_CHECK
+
 
 // ======================================================================================================
 // == End User Define Section ===========================================================================
@@ -450,6 +461,12 @@ public:
     // I2C structure pointer - this is a local, passed as an argument to base functions
     //                         since static functions cannot see it.
     struct i2cStruct* i2c;
+    //
+    // I2C ISR Active flag - this is used to disable priority escalation.  Increment to 1 to disable priority
+    //                       check.  This is a global flag to prevent complex cross-bus issues.  It is only
+    //                       incremented/decremented, not set.
+    //
+    static volatile uint8_t isrActive;
 
     // ------------------------------------------------------------------------------------------------------
     // Constructor
@@ -482,7 +499,7 @@ public:
     // Initialize I2C (Master) - initializes I2C as Master mode, external pullups, 100kHz rate,
     //                           and default pin setting
     // default pin setting SCL/SDA:
-    //      Wire:   19/18 
+    //      Wire:   19/18
     //      Wire1:  29/30 (3.1/3.2), 22/23 (LC), 37/38 (3.5/3.6)
     //      Wire2:   3/4  (3.5/3.6)
     //      Wire3:  57/56 (3.6)
@@ -494,7 +511,7 @@ public:
     // Initialize I2C (Slave) - initializes I2C as Slave mode using address, external pullups, 100kHz rate,
     //                          and default pin setting
     // default pin setting SCL/SDA:
-    //      Wire:   19/18 
+    //      Wire:   19/18
     //      Wire1:  29/30 (3.1/3.2), 22/23 (LC), 37/38 (3.5/3.6)
     //      Wire2:   3/4  (3.5/3.6)
     //      Wire3:  57/56 (3.6)
@@ -516,8 +533,8 @@ public:
     //     ^pins = pins to use, can be specified as 'i2c_pins' enum,
     //             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
     //          Interface  Devices     Pin Name      SCL    SDA   Default
-    //          ---------  -------  --------------  -----  -----  -------  
-    //             Wire      All    I2C_PINS_16_17    16     17             
+    //          ---------  -------  --------------  -----  -----  -------
+    //             Wire      All    I2C_PINS_16_17    16     17
     //             Wire      All    I2C_PINS_18_19    19*    18      +
     //             Wire    3.5/3.6  I2C_PINS_7_8       7      8
     //             Wire    3.5/3.6  I2C_PINS_33_34    33     34
@@ -646,8 +663,8 @@ public:
     //      pins = pins to use, can be specified as 'i2c_pins' enum,
     //             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
     //          Interface  Devices     Pin Name      SCL    SDA   Default
-    //          ---------  -------  --------------  -----  -----  -------  
-    //             Wire      All    I2C_PINS_16_17    16     17             
+    //          ---------  -------  --------------  -----  -----  -------
+    //             Wire      All    I2C_PINS_16_17    16     17
     //             Wire      All    I2C_PINS_18_19    19*    18      +
     //             Wire    3.5/3.6  I2C_PINS_7_8       7      8
     //             Wire    3.5/3.6  I2C_PINS_33_34    33     34
@@ -677,7 +694,7 @@ public:
     // ------------------------------------------------------------------------------------------------------
     // Get SCL/SDA - get the current SCL or SDA pin
     // return: pin used
-    // 
+    //
     inline uint8_t getSCL(void) { return i2c->currentSCL; }
     inline uint8_t getSDA(void) { return i2c->currentSDA; }
 
@@ -743,7 +760,7 @@ public:
     //                        used to indicate if command should end with a STOP (I2C_STOP) or not (I2C_NOSTOP). Use
     //                        done(), finish(), or onTransmitDone() callback to determine completion and
     //                        status() to determine success/fail.  Note that sendTransmission() does not currently
-    //                        support timeouts (aside from initial bus acquisition which does support it). 
+    //                        support timeouts (aside from initial bus acquisition which does support it).
     // return: none
     // parameters:
     //     ^i2c_stop = I2C_NOSTOP, I2C_STOP (default STOP)
@@ -780,7 +797,7 @@ public:
     // Start Master Receive - non-blocking routine, starts request for length bytes from slave at address. Receive
     //                        data will be placed in the Rx buffer. i2c_stop parameter can be used to indicate if
     //                        command should end with a STOP (I2C_STOP) or not (I2C_NOSTOP). Use done(), finish()
-    //                        or onReqFromDone() callback to determine completion and status() to determine 
+    //                        or onReqFromDone() callback to determine completion and status() to determine
     //                        success/fail.
     // return: none
     // parameters:
@@ -986,6 +1003,11 @@ extern i2c_t3 Wire;
    ------------------------------------------------------------------------------------------------------
    Changelog
    ------------------------------------------------------------------------------------------------------
+
+    - (v10.1) Modified 02Jan18 by Brian (nox771 at gmail.com)
+        - Added User #define to disable priority checks entirely
+        - Added i2c_t3::isrActive flag to dynamically disable priority checks during ISR & callbacks.
+          This is to prevent runaway priority escalation in cases of callbacks with nested Wire calls.
 
     - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
         - Default assignments have been added to many functions for pins/pullup/rate/op_mode, so

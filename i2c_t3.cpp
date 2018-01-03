@@ -54,6 +54,8 @@ struct i2cStruct i2c_t3::i2cData[] =
 #endif
 };
 
+volatile uint8_t i2c_t3::isrActive = 0;
+
 
 // ------------------------------------------------------------------------------------------------------
 // Constructor/Destructor
@@ -386,44 +388,42 @@ void i2c_t3::setRate_(struct i2cStruct* i2c, uint32_t busFreq, uint32_t i2cFreq)
 
 uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, uint8_t reconfig)
 {
-    uint8_t validAlt, retval=0;
+    uint8_t validAltSCL, validAltSDA;
     volatile uint32_t* pcr;
 
     if(reconfig && (*(i2c->S) & I2C_S_BUSY)) return 0; // if reconfig return immediately if bus busy (reconfig=0 for init)
 
     // Verify new SCL pin is different and valid, or reconfig=0 (re-init)
     //
-    validAlt = validPin_(bus, pinSCL, 1);
-    if((pinSCL != i2c->currentSCL && validAlt) || !reconfig)
+    validAltSCL = validPin_(bus, pinSCL, 1);
+    if((pinSCL != i2c->currentSCL && validAltSCL) || !reconfig)
     {
         // If reconfig set, switch previous pin to non-I2C input
         if(reconfig) pinMode(i2c->currentSCL, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
         // Config new pin
-        PIN_CONFIG_ALT(configSCL, validAlt);
+        PIN_CONFIG_ALT(configSCL, validAltSCL);
         pcr = portConfigRegister(pinSCL);
         *pcr = configSCL;
         i2c->currentSCL = pinSCL;
         i2c->currentPullup = pullup;
-        retval = 1;
     }
 
     // Verify new SDA pin is different and valid (not necessarily same Alt as SCL), or reconfig=0 (re-init)
     //
-    validAlt = validPin_(bus, pinSDA, 2);
-    if((pinSDA != i2c->currentSDA && validAlt) || !reconfig)
+    validAltSDA = validPin_(bus, pinSDA, 2);
+    if((pinSDA != i2c->currentSDA && validAltSDA) || !reconfig)
     {
         // If reconfig set, switch previous pin to non-I2C input
         if(reconfig) pinMode(i2c->currentSDA, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
         // Config new pin
-        PIN_CONFIG_ALT(configSDA, validAlt);
+        PIN_CONFIG_ALT(configSDA, validAltSDA);
         pcr = portConfigRegister(pinSDA);
         *pcr = configSDA;
         i2c->currentSDA = pinSDA;
         i2c->currentPullup = pullup;
-        retval = 1;
     }
 
-    return retval;
+    return (validAltSCL && validAltSDA);
 }
 
 
@@ -438,7 +438,6 @@ uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, uint8_t pinSCL
 uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout, uint8_t& forceImm)
 {
     elapsedMicros deltaT;
-    int irqPriority, currPriority;
 
     // update timeout
     timeout = (timeout == 0) ? i2c->defTimeout : timeout;
@@ -489,48 +488,56 @@ uint8_t i2c_t3::acquireBus_(struct i2cStruct* i2c, uint8_t bus, uint32_t timeout
         }
     }
 
-    // For ISR operation, check if current routine has higher priority than I2C IRQ, and if so
-    // either escalate priority of I2C IRQ or send I2C using immediate mode
-    if(i2c->opMode == I2C_OP_MODE_ISR || i2c->opMode == I2C_OP_MODE_DMA)
-    {
-        currPriority = nvic_execution_priority();
-        switch(bus)
+    #ifndef I2C_DISABLE_PRIORITY_CHECK
+        // For ISR operation, check if current routine has higher priority than I2C IRQ, and if so
+        // either escalate priority of I2C IRQ or send I2C using immediate mode.
+        //
+        // This check is disabled if the routine is called during an active I2C ISR (assumes it is
+        // called from ISR callback).  This is to prevent runaway escalation with nested Wire calls.
+        //
+        int irqPriority, currPriority;
+        if(!i2c_t3::isrActive && (i2c->opMode == I2C_OP_MODE_ISR || i2c->opMode == I2C_OP_MODE_DMA))
         {
-        case 0:  irqPriority = NVIC_GET_PRIORITY(IRQ_I2C0); break;
-        #if defined(__MKL26Z64__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.1/3.2/3.5/3.6
-        case 1:  irqPriority = NVIC_GET_PRIORITY(IRQ_I2C1); break;
-        #endif
-        #if defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.5/3.6
-        case 2:  irqPriority = NVIC_GET_PRIORITY(IRQ_I2C2); break;
-        #endif
-        #if defined(__MK66FX1M0__) // 3.6
-        case 3:  irqPriority = NVIC_GET_PRIORITY(IRQ_I2C3); break;
-        #endif
-        default: irqPriority = NVIC_GET_PRIORITY(IRQ_I2C0); break;
-        }
-        if(currPriority <= irqPriority)
-        {
-            if(currPriority < 16)
-                forceImm = 1; // current priority cannot be surpassed, force Immediate mode
-            else
+            currPriority = nvic_execution_priority();
+            switch(bus)
             {
-                switch(bus)
+            case 0:  irqPriority = NVIC_GET_PRIORITY(IRQ_I2C0); break;
+            #if defined(__MKL26Z64__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.1/3.2/3.5/3.6
+            case 1:  irqPriority = NVIC_GET_PRIORITY(IRQ_I2C1); break;
+            #endif
+            #if defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.5/3.6
+            case 2:  irqPriority = NVIC_GET_PRIORITY(IRQ_I2C2); break;
+            #endif
+            #if defined(__MK66FX1M0__) // 3.6
+            case 3:  irqPriority = NVIC_GET_PRIORITY(IRQ_I2C3); break;
+            #endif
+            default: irqPriority = NVIC_GET_PRIORITY(IRQ_I2C0); break;
+            }
+            if(currPriority <= irqPriority)
+            {
+                if(currPriority < 16)
+                    forceImm = 1; // current priority cannot be surpassed, force Immediate mode
+                else
                 {
-                case 0:  NVIC_SET_PRIORITY(IRQ_I2C0, currPriority-16); break;
-                #if defined(__MKL26Z64__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.1/3.2/3.5/3.6
-                case 1:  NVIC_SET_PRIORITY(IRQ_I2C1, currPriority-16); break;
-                #endif
-                #if defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.5/3.6
-                case 2:  NVIC_SET_PRIORITY(IRQ_I2C2, currPriority-16); break;
-                #endif
-                #if defined(__MK66FX1M0__) // 3.6
-                case 3:  NVIC_SET_PRIORITY(IRQ_I2C3, currPriority-16); break;
-                #endif
-                default: NVIC_SET_PRIORITY(IRQ_I2C0, currPriority-16); break;
+                    switch(bus)
+                    {
+                    case 0:  NVIC_SET_PRIORITY(IRQ_I2C0, currPriority-16); break;
+                    #if defined(__MKL26Z64__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__) // LC/3.1/3.2/3.5/3.6
+                    case 1:  NVIC_SET_PRIORITY(IRQ_I2C1, currPriority-16); break;
+                    #endif
+                    #if defined(__MK64FX512__) || defined(__MK66FX1M0__) // 3.5/3.6
+                    case 2:  NVIC_SET_PRIORITY(IRQ_I2C2, currPriority-16); break;
+                    #endif
+                    #if defined(__MK66FX1M0__) // 3.6
+                    case 3:  NVIC_SET_PRIORITY(IRQ_I2C3, currPriority-16); break;
+                    #endif
+                    default: NVIC_SET_PRIORITY(IRQ_I2C0, currPriority-16); break;
+                    }
                 }
             }
         }
-    }
+    #endif
+
     return 1;
 }
 
@@ -1152,6 +1159,7 @@ void i2c0_isr(void) // I2C0 ISR
 void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
 {
     uint8_t status, c1, data;
+    i2c_t3::isrActive++;
 
     status = *(i2c->S);
     c1 = *(i2c->C1);
@@ -1211,6 +1219,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     *(i2c->S) = I2C_S_IICIF; // clear intr
                     if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if DMA error or ARBL
                 }
+                i2c_t3::isrActive--;
                 return;
             } // end DMA Tx
             else
@@ -1285,6 +1294,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                             *(i2c->S) = I2C_S_IICIF; // clear intr
                         }
                     }
+                    i2c_t3::isrActive--;
                     return;
                 }
                 else if(i2c->currentStatus == I2C_SEND_ADDR)
@@ -1332,6 +1342,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                         data = *(i2c->D); // dummy read
                         *(i2c->S) = I2C_S_IICIF; // clear intr
                     }
+                    i2c_t3::isrActive--;
                     return;
                 }
                 else if(i2c->currentStatus == I2C_TIMEOUT)
@@ -1344,6 +1355,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     *(i2c->S) = I2C_S_IICIF; // clear intr
                     I2C_ERR_INC(I2C_ERRCNT_TIMEOUT);
                     if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if timeout
+                    i2c_t3::isrActive--;
                     return;
                 }
                 else
@@ -1352,6 +1364,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     // send STOP, change to Rx mode, intr disabled
                     *(i2c->C1) = I2C_C1_IICEN;
                     *(i2c->S) = I2C_S_IICIF; // clear intr
+                    i2c_t3::isrActive--;
                     return;
                 }
             } // end ISR Tx
@@ -1401,6 +1414,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     I2C_ERR_INC(I2C_ERRCNT_DMA_ERR);
                     if(i2c->user_onError != nullptr) i2c->user_onError(); // run Error callback if DMA error
                 }
+                i2c_t3::isrActive--;
                 return;
             }
             else
@@ -1445,6 +1459,8 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 }
                 if(i2c->currentStatus == I2C_TIMEOUT && !i2c->timeoutRxNAK)
                     i2c->timeoutRxNAK = 1; // set flag to indicate NAK sent
+
+                i2c_t3::isrActive--;
                 return;
             }
         }
@@ -1467,6 +1483,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
                 #endif
                 *(i2c->S) = I2C_S_IICIF; // clear intr
+                i2c_t3::isrActive--;
                 return;
             }
         }
@@ -1516,6 +1533,7 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                 *(i2c->FLT) |= I2C_FLT_STOPF | I2C_FLT_STARTF;  // clear STOP/START intr
             #endif
             *(i2c->S) = I2C_S_IICIF; // clear intr
+            i2c_t3::isrActive--;
             return;
         }
         if(c1 & I2C_C1_TX)
@@ -1552,11 +1570,12 @@ void i2c_isr_handler(struct i2cStruct* i2c, uint8_t bus)
                     *(i2c->S) = I2C_S_IICIF; // clear intr
                     i2c->currentStatus = I2C_WAITING;
                     // Slave Rx complete, run callback
-                    if(i2c->user_onReceive != nullptr) 
+                    if(i2c->user_onReceive != nullptr)
                     {
                         i2c->rxBufferIndex = 0;
                         i2c->user_onReceive(i2c->rxBufferLength);
                     }
+                    i2c_t3::isrActive--;
                     return;
                 }
             #endif
@@ -1646,6 +1665,11 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
    ------------------------------------------------------------------------------------------------------
    Changelog
    ------------------------------------------------------------------------------------------------------
+
+    - (v10.1) Modified 02Jan18 by Brian (nox771 at gmail.com)
+        - Added User #define to disable priority checks entirely
+        - Added i2c_t3::isrActive flag to dynamically disable priority checks during ISR & callbacks.
+          This is to prevent runaway priority escalation in cases of callbacks with nested Wire calls.
 
     - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
         - Default assignments have been added to many functions for pins/pullup/rate/op_mode, so
