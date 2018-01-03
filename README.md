@@ -211,6 +211,8 @@ These defines can be modified at the top of the **i2c_t3.h** file.
 
 * **I2C_ERROR_COUNTERS** - uncomment to make the library track error counts.  Error counts can be retrieved or zeroed using the **getErrorCount()** and **zeroErrorCount()** functions respectively.  When included, errors will be tracked on the following (Master-mode only): Reset Bus (auto-retry only), Timeout, Addr NAK, Data NAK, Arb Lost, Bus Not Acquired, DMA Errors.  By default error counts are enabled.
 
+* **I2C_DISABLE_PRIORITY_CHECK** - uncomment to entirely disable auto priority escalation.  Normally priority escalation occurs to ensure I2C ISR operates at a higher priority than the calling function (to prevent ISR stall if the calling function blocks).  Uncommenting this will disable the check and cause I2C ISR to remain at default priority.  It is recommended to disable this check and manually set ISR priority levels when using complex configurations.  By default priority checks are enabled (this define is commented out).
+
 ---
 ---
 ## **Function Summary**

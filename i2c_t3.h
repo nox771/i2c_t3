@@ -112,7 +112,7 @@
 
 // ------------------------------------------------------------------------------------------------------
 // Disable priority check - uncomment this to entirely disable auto priority escalation.  Normally
-//                          priority escalation occurs to insure I2C ISR operates at a higher priority
+//                          priority escalation occurs to ensure I2C ISR operates at a higher priority
 //                          than the calling function (to prevent ISR stall if the calling function
 //                          blocks).  Uncommenting this will disable the check and cause I2C ISR to
 //                          remain at default priority.  It is recommended to disable this check and
