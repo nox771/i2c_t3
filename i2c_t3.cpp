@@ -1,25 +1,27 @@
 /*
     ------------------------------------------------------------------------------------------------------
     i2c_t3 - I2C library for Teensy 3.x & LC
-    Copyright (c) 2013-2017, Brian (nox771 at gmail.com)
 
-    - (v10.0) Modified 21Oct17 by Brian (nox771 at gmail.com)
+    - (v11.0) Modified 01Dec18 by Brian (nox771 at gmail.com)
 
     Full changelog at end of file
     ------------------------------------------------------------------------------------------------------
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+    Copyright (c) 2013-2018, Brian (nox771 at gmail.com)
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and 
+    associated documentation files (the "Software"), to deal in the Software without restriction, 
+    including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+    and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
+    subject to the following conditions:
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    The above copyright notice and this permission notice shall be included in all copies or substantial 
+    portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT 
+    LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+    WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     ------------------------------------------------------------------------------------------------------
 */
 
@@ -34,7 +36,7 @@
 //
 #define I2C_STRUCT(a1,f,c1,s,d,c2,flt,ra,smb,a2,slth,sltl,scl,sda) \
     {a1, f, c1, s, d, c2, flt, ra, smb, a2, slth, sltl, {}, 0, 0, {}, 0, 0, I2C_OP_MODE_ISR, I2C_MASTER, scl, sda, I2C_PULLUP_EXT, 100000, \
-     I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0, {} }
+     I2C_STOP, I2C_WAITING, 0, 0, 0, 0, I2C_DMA_OFF, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0, {}, 0, 0 }
 
 struct i2cStruct i2c_t3::i2cData[] =
 {
@@ -82,7 +84,8 @@ i2c_t3::~i2c_t3()
 //    ^ address2 = 2nd 7bit address for specifying Slave address range (ignored for Master mode)
 //    ^ pins = pins to use, can be specified as 'i2c_pins' enum,
 //             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
-//          Interface  Devices     Pin Name      SCL    SDA
+//                                 Pin Name
+//          Interface  Devices   (deprecated)    SCL    SDA
 //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
 //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
 //             Wire      All    I2C_PINS_18_19    19     18  *
@@ -144,13 +147,12 @@ void i2c_t3::begin_(struct i2cStruct* i2c, uint8_t bus, i2c_mode mode, uint8_t a
                                 : 0;
     }
 
-    // Setup pins and options (note: does not "unset" unused pins if changed).  As noted in
-    // original TwoWire.cpp, internal 3.0/3.1/3.2 pullup is strong (about 190 ohms), but it can
-    // work if other devices on bus have strong enough pulldown devices (usually true).
+    // Setup pins - As noted in original TwoWire.cpp, internal 3.0/3.1/3.2 pullup is strong (about 190 ohms), 
+    // but it can work if other devices on bus have strong enough pulldowns.
     //
     if(!pinSCL) pinSCL = i2c->currentSCL; // if either pin specified as 0, then use current settings
     if(!pinSDA) pinSDA = i2c->currentSDA;
-    pinConfigure_(i2c, bus, pinSCL, pinSDA, pullup, 0);
+    pinConfigure_(i2c, bus, pinSCL, pinSDA, pullup, i2c->configuredSCL, i2c->configuredSDA);
 
     // Set I2C rate
     #if defined(__MKL26Z64__) // LC
@@ -367,7 +369,8 @@ void i2c_t3::setRate_(struct i2cStruct* i2c, uint32_t busFreq, uint32_t i2cFreq)
 // parameters:
 //      pins = pins to use, can be specified as 'i2c_pins' enum,
 //             or as 'SCL,SDA' pair (using any valid SCL or SDA), options are:
-//          Interface  Devices     Pin Name      SCL    SDA
+//                                 Pin Name
+//          Interface  Devices   (deprecated)    SCL    SDA
 //          ---------  -------  --------------  -----  -----    (note: in almost all cases SCL is the
 //             Wire      All    I2C_PINS_16_17    16     17      lower pin #, except cases marked *)
 //             Wire      All    I2C_PINS_18_19    19     18  *
@@ -386,41 +389,44 @@ void i2c_t3::setRate_(struct i2cStruct* i2c, uint32_t busFreq, uint32_t i2cFreq)
 #define PIN_CONFIG_ALT(name,alt) uint32_t name = (pullup == I2C_PULLUP_EXT) ? (PORT_PCR_MUX(alt)|PORT_PCR_ODE|PORT_PCR_SRE|PORT_PCR_DSE) \
                                                                             : (PORT_PCR_MUX(alt)|PORT_PCR_PE|PORT_PCR_PS)
 
-uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, uint8_t reconfig)
+uint8_t i2c_t3::pinConfigure_(struct i2cStruct* i2c, uint8_t bus, uint8_t pinSCL, uint8_t pinSDA, i2c_pullup pullup, 
+                              uint8_t configuredSCL, uint8_t configuredSDA)
 {
     uint8_t validAltSCL, validAltSDA;
     volatile uint32_t* pcr;
 
-    if(reconfig && (*(i2c->S) & I2C_S_BUSY)) return 0; // if reconfig return immediately if bus busy (reconfig=0 for init)
+    if((configuredSCL && configuredSDA) && (*(i2c->S) & I2C_S_BUSY)) return 0; // if configured return immediately if bus busy
 
-    // Verify new SCL pin is different and valid, or reconfig=0 (re-init)
+    // Verify new SCL pin is different or not configured, and valid
     //
     validAltSCL = validPin_(bus, pinSCL, 1);
-    if((pinSCL != i2c->currentSCL && validAltSCL) || !reconfig)
+    if((pinSCL != i2c->currentSCL || !configuredSCL) && validAltSCL)
     {
-        // If reconfig set, switch previous pin to non-I2C input
-        if(reconfig) pinMode(i2c->currentSCL, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
+        // If configured, switch previous pin to non-I2C input
+        if(configuredSCL) pinMode(i2c->currentSCL, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
         // Config new pin
         PIN_CONFIG_ALT(configSCL, validAltSCL);
         pcr = portConfigRegister(pinSCL);
         *pcr = configSCL;
         i2c->currentSCL = pinSCL;
         i2c->currentPullup = pullup;
+        i2c->configuredSCL = 1;
     }
 
-    // Verify new SDA pin is different and valid (not necessarily same Alt as SCL), or reconfig=0 (re-init)
+    // Verify new SDA pin is different or not configured, and valid
     //
     validAltSDA = validPin_(bus, pinSDA, 2);
-    if((pinSDA != i2c->currentSDA && validAltSDA) || !reconfig)
+    if((pinSDA != i2c->currentSDA || !configuredSDA) && validAltSDA) 
     {
         // If reconfig set, switch previous pin to non-I2C input
-        if(reconfig) pinMode(i2c->currentSDA, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
+        if(configuredSDA) pinMode(i2c->currentSDA, (i2c->currentPullup == I2C_PULLUP_EXT) ? INPUT : INPUT_PULLUP);
         // Config new pin
         PIN_CONFIG_ALT(configSDA, validAltSDA);
         pcr = portConfigRegister(pinSDA);
         *pcr = configSDA;
         i2c->currentSDA = pinSDA;
         i2c->currentPullup = pullup;
+        i2c->configuredSDA = 1;
     }
 
     return (validAltSCL && validAltSDA);
@@ -567,7 +573,7 @@ void i2c_t3::resetBus_(struct i2cStruct* i2c, uint8_t bus)
     }
 
     // reconfigure pins for I2C
-    pinConfigure_(i2c, bus, scl, sda, i2c->currentPullup, 0);
+    pinConfigure_(i2c, bus, scl, sda, i2c->currentPullup, 0, 0);
 
     // reset config and status
     if(*(i2c->S) & 0x7F) // reset config if any residual status bits are set
@@ -1665,6 +1671,12 @@ i2c_t3 Wire  = i2c_t3(0);       // I2C0
    ------------------------------------------------------------------------------------------------------
    Changelog
    ------------------------------------------------------------------------------------------------------
+
+    - (v11.0) Modified 01Dec18 by Brian (nox771 at gmail.com)
+        - Added state variables and modified pinConfigure_() to recognize unconfigured SCL/SDA pins, 
+          allowing for setSCL()/setSDA() prior to begin(), which was previously blocked by bus busy 
+          check on unconfigured pins.
+        - Header change to MIT permissive license
 
     - (v10.1) Modified 02Jan18 by Brian (nox771 at gmail.com)
         - Added User #define to disable priority checks entirely
